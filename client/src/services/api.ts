@@ -21,8 +21,42 @@ api.interceptors.response.use(
 );
 
 export const jobsApi = {
-  // Search jobs with Google-powered global search
+  // Search jobs with Israeli job sites scraping
   searchJobs: (query: JobSearchQuery): Promise<ApiResponse<JobSearchResponse>> => {
+    const params = new URLSearchParams();
+    
+    // Map frontend parameters to job search API
+    if (query.keywords) params.append('q', query.keywords);
+    if (query.location) params.append('location', query.location);
+    if (query.limit) params.append('limit', query.limit.toString());
+    
+    // Add sources for Israeli job sites
+    params.append('sources', 'alljobs,drushim,jobmaster');
+    
+    console.log('🇮🇱 Searching Israeli jobs from multiple sources:', params.toString());
+
+    return api.get(`/job-search/search?${params.toString()}`);
+  },
+
+  // Get trending job keywords
+  getTrendingKeywords: (): Promise<ApiResponse<{ trending: string[] }>> => {
+    return api.get('/job-search/trending');
+  },
+
+  // Get job categories
+  getJobCategories: (): Promise<ApiResponse<{ categories: { name: string; count: number }[] }>> => {
+    return api.get('/job-search/categories');
+  },
+
+  // Get search suggestions
+  getSearchSuggestions: (query: string): Promise<ApiResponse<{ suggestions: string[] }>> => {
+    const params = new URLSearchParams();
+    params.append('q', query);
+    return api.get(`/job-search/suggest?${params.toString()}`);
+  },
+
+  // Legacy Google-powered search (fallback)
+  searchGlobalJobs: (query: JobSearchQuery): Promise<ApiResponse<JobSearchResponse>> => {
     const params = new URLSearchParams();
     
     // Map frontend parameters to Google job server parameters
@@ -35,7 +69,7 @@ export const jobsApi = {
     if (query.experienceLevel) params.append('experienceLevel', query.experienceLevel);
     if (query.employmentType) params.append('employmentType', query.employmentType);
     
-    console.log('� Searching global jobs with Google-powered search:', params.toString());
+    console.log('🌍 Fallback: Searching global jobs with Google-powered search:', params.toString());
 
     return api.get(`/jobs/search?${params.toString()}`);
   },

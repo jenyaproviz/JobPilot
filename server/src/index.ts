@@ -5,6 +5,7 @@ import { connectDB } from "./config/db";
 import jobRoutes from "./routes/jobs";
 import contactRoutes from "./routes/contact";
 import jobSitesRoutes from "./routes/jobSites";
+import jobSearchRoutes from "./routes/jobSearch";
 
 dotenv.config();
 
@@ -27,6 +28,7 @@ app.use(express.json());
 app.use("/api/jobs", jobRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/job-sites", jobSitesRoutes);
+app.use("/api/job-search", jobSearchRoutes);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {

@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import { Search, MapPin, Filter, Briefcase, Zap } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, MapPin, Filter, Briefcase, Zap, TrendingUp } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../hooks/redux';
 import { searchJobs, scrapeJobs, setSearchQuery } from '../store/jobsSlice';
+import { jobsApi } from '../services/api';
 
 const JobSearchForm: React.FC = () => {
   const dispatch = useAppDispatch();
   const { searchQuery, isLoading } = useAppSelector((state) => state.jobs);
+  const [trendingKeywords, setTrendingKeywords] = useState<string[]>([]);
   
   const [localQuery, setLocalQuery] = useState({
     keywords: searchQuery.keywords || '',
@@ -14,6 +16,30 @@ const JobSearchForm: React.FC = () => {
     experienceLevel: searchQuery.experienceLevel || '',
     datePosted: searchQuery.datePosted || 'all'
   });
+
+  // Fetch trending keywords on component mount
+  useEffect(() => {
+    const fetchTrending = async () => {
+      try {
+        const response = await jobsApi.getTrendingKeywords();
+        if (response.success && response.data) {
+          setTrendingKeywords(response.data.trending);
+        }
+      } catch (error) {
+        console.error('Failed to fetch trending keywords:', error);
+        // Fallback to default keywords
+        setTrendingKeywords([
+          'React Developer',
+          'Full Stack',
+          'Product Manager',
+          'DevOps Engineer',
+          'Data Scientist'
+        ]);
+      }
+    };
+    
+    fetchTrending();
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,13 +196,41 @@ const JobSearchForm: React.FC = () => {
         </div>
       </form>
       
+      {/* Popular Searches */}
+      {trendingKeywords.length > 0 && (
+        <div className="mt-6 p-4 bg-gradient-to-r from-orange-50 to-red-50 rounded-lg">
+          <div className="flex items-center gap-2 mb-3">
+            <TrendingUp className="w-5 h-5 text-orange-600" />
+            <h4 className="font-medium text-orange-900">🔥 Popular Searches in Israel</h4>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {trendingKeywords.slice(0, 8).map((keyword) => (
+              <button
+                key={keyword}
+                type="button"
+                onClick={() => {
+                  setLocalQuery(prev => ({ ...prev, keywords: keyword }));
+                  const query = { ...localQuery, keywords: keyword, page: 1, limit: 20 };
+                  dispatch(setSearchQuery(query));
+                  dispatch(searchJobs(query));
+                }}
+                className="px-3 py-1.5 bg-white text-orange-700 text-sm font-medium rounded-full border border-orange-200 hover:bg-orange-100 hover:border-orange-300 transition-colors"
+              >
+                {keyword}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Search Tips */}
-      <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+      <div className="mt-4 p-4 bg-blue-50 rounded-lg">
         <h4 className="font-medium text-blue-900 mb-2">💡 Search Tips:</h4>
         <ul className="text-sm text-blue-800 space-y-1">
           <li>• Try specific technologies: "React TypeScript", "Node.js Express"</li>
           <li>• Use job titles: "Frontend Developer", "DevOps Engineer"</li>
-          <li>• Click "Scrape Fresh Jobs" to get the latest postings from job sites</li>
+          <li>• Click "Scrape Fresh Jobs" to get the latest postings from Israeli job sites</li>
+          <li>• We search AllJobs, Drushim, and other top Israeli job portals</li>
         </ul>
       </div>
     </div>

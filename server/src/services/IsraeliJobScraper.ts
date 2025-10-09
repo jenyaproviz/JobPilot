@@ -16,8 +16,9 @@ export class IsraeliJobScraper {
     try {
       console.log(`🇮🇱 Scraping AllJobs.co.il for: "${keywords}"`);
       
-      // AllJobs.co.il search URL
-      const searchUrl = `https://www.alljobs.co.il/SearchResultsGuest.aspx?page=1&position=${encodeURIComponent(keywords)}&type=&freetxt=`;
+      // Updated AllJobs.co.il search URL structure
+      const baseUrl = 'https://www.alljobs.co.il';
+      const searchUrl = `${baseUrl}/Jobs/SearchJobs.aspx?FreeText=${encodeURIComponent(keywords)}&page=1`;
       
       const response = await axios.get(searchUrl, { 
         headers: this.headers,
@@ -28,26 +29,31 @@ export class IsraeliJobScraper {
       const $ = cheerio.load(response.data);
       const jobs: IJob[] = [];
       
-      // AllJobs uses specific selectors - these might need adjustment based on current site structure
-      $('.job-item, .JobItem, .result-item, .search-result').each((index, element) => {
+      // Updated selectors for AllJobs current structure
+      $('.JobListRow, .JobListItem, .job-row, .job-item').each((index, element) => {
         if (index >= limit) return false;
         
         const $job = $(element);
-        const title = $job.find('.job-title, .JobTitle, h2, h3').first().text().trim();
-        const company = $job.find('.company-name, .CompanyName, .employer').first().text().trim();
-        const location = $job.find('.location, .Location, .area').first().text().trim() || 'Israel';
-        const description = $job.find('.job-description, .JobDescription, .description').first().text().trim();
-        const jobLink = $job.find('a').first().attr('href');
-        const fullUrl = jobLink ? (jobLink.startsWith('http') ? jobLink : `https://www.alljobs.co.il${jobLink}`) : searchUrl;
+        const titleElement = $job.find('.JobTitle a, .job-title a, h2 a, h3 a').first();
+        const title = titleElement.text().trim() || $job.find('.JobTitle, .job-title, h2, h3').first().text().trim();
+        const company = $job.find('.CompanyName, .company-name, .company').first().text().trim();
+        const jobLocation = $job.find('.JobLocation, .job-location, .location').first().text().trim() || location || 'Israel';
+        const description = $job.find('.JobDescription, .job-description, .description').first().text().trim();
+        const jobLink = titleElement.attr('href') || $job.find('a').first().attr('href');
+        const fullUrl = jobLink ? (jobLink.startsWith('http') ? jobLink : `${baseUrl}${jobLink}`) : searchUrl;
+        
+        // Extract salary if available
+        const salaryText = $job.find('.salary, .Salary, .wage').first().text().trim();
+        const salary = salaryText ? salaryText : undefined;
         
         if (title && company) {
           jobs.push({
             _id: `alljobs_${Date.now()}_${index}`,
             title,
             company,
-            location,
-            description: description || `${title} position at ${company}`,
-            salary: undefined,
+            location: jobLocation,
+            description: description || `${title} position at ${company} in ${jobLocation}`,
+            salary,
             employmentType: 'full-time' as const,
             experienceLevel: this.extractExperienceLevel(title, description),
             postedDate: new Date(),
