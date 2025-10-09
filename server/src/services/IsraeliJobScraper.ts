@@ -353,4 +353,121 @@ export class IsraeliJobScraper {
     
     return skills.slice(0, 6);
   }
+
+  // JobMaster.co.il scraper
+  async scrapeJobMaster(keywords: string, location: string = '', limit: number = 10): Promise<IJob[]> {
+    try {
+      console.log(`🇮🇱 Scraping JobMaster.co.il for: "${keywords}"`);
+      
+      const baseUrl = 'https://www.jobmaster.co.il';
+      const searchUrl = `${baseUrl}/jobs/?q=${encodeURIComponent(keywords)}`;
+      
+      const response = await axios.get(searchUrl, { 
+        headers: this.headers,
+        timeout: 15000,
+        maxRedirects: 5
+      });
+      
+      const $ = cheerio.load(response.data);
+      const jobs: IJob[] = [];
+      
+      $('.job-item, .job-card, .position-item').each((index, element) => {
+        if (index >= limit) return false;
+        
+        const $job = $(element);
+        const title = $job.find('.job-title, .position-title, h2, h3').first().text().trim();
+        const company = $job.find('.company-name, .employer, .company').first().text().trim();
+        const jobLocation = $job.find('.location, .area, .city').first().text().trim() || location || 'Israel';
+        const description = $job.find('.description, .summary').first().text().trim();
+        const jobLink = $job.find('a').first().attr('href');
+        const fullUrl = jobLink ? (jobLink.startsWith('http') ? jobLink : `${baseUrl}${jobLink}`) : searchUrl;
+        
+        if (title && company) {
+          jobs.push({
+            _id: `jobmaster_${Date.now()}_${index}`,
+            title,
+            company,
+            location: jobLocation,
+            description: description || `${title} position at ${company}`,
+            salary: undefined,
+            requirements: [],
+            employmentType: 'full-time',
+            experienceLevel: 'mid',
+            source: 'JobMaster.co.il',
+            originalUrl: fullUrl,
+            postedDate: new Date(),
+            scrapedAt: new Date(),
+            keywords: this.extractTechSkills(title + ' ' + description),
+            isActive: true
+          });
+        }
+      });
+
+      console.log(`✅ JobMaster: Found ${jobs.length} jobs`);
+      return jobs;
+
+    } catch (error) {
+      console.error('❌ JobMaster scraping failed:', error);
+      return [];
+    }
+  }
+
+  // Got Friends scraper (Tech-focused)
+  async scrapeGotFriends(keywords: string, location: string = '', limit: number = 10): Promise<IJob[]> {
+    try {
+      console.log(`🇮🇱 Scraping Got Friends for: "${keywords}"`);
+      
+      // Note: Got Friends may require different approach - this is a basic implementation
+      const baseUrl = 'https://www.gotfriends.co.il';
+      const searchUrl = `${baseUrl}/jobs?search=${encodeURIComponent(keywords)}`;
+      
+      const response = await axios.get(searchUrl, { 
+        headers: this.headers,
+        timeout: 15000,
+        maxRedirects: 5
+      });
+      
+      const $ = cheerio.load(response.data);
+      const jobs: IJob[] = [];
+      
+      $('.job-listing, .position-card, .job-item').each((index, element) => {
+        if (index >= limit) return false;
+        
+        const $job = $(element);
+        const title = $job.find('.job-title, .position-name, h2, h3').first().text().trim();
+        const company = $job.find('.company, .employer, .company-name').first().text().trim();
+        const jobLocation = $job.find('.location, .city').first().text().trim() || location || 'Tel Aviv, Israel';
+        const description = $job.find('.description, .summary, .job-desc').first().text().trim();
+        const jobLink = $job.find('a').first().attr('href');
+        const fullUrl = jobLink ? (jobLink.startsWith('http') ? jobLink : `${baseUrl}${jobLink}`) : searchUrl;
+        
+        if (title && company) {
+          jobs.push({
+            _id: `gotfriends_${Date.now()}_${index}`,
+            title,
+            company,
+            location: jobLocation,
+            description: description || `${title} position at ${company}`,
+            salary: undefined,
+            requirements: [],
+            employmentType: 'full-time',
+            experienceLevel: 'mid',
+            source: 'Got Friends',
+            originalUrl: fullUrl,
+            postedDate: new Date(),
+            scrapedAt: new Date(),
+            keywords: this.extractTechSkills(title + ' ' + description),
+            isActive: true
+          });
+        }
+      });
+
+      console.log(`✅ Got Friends: Found ${jobs.length} jobs`);
+      return jobs;
+
+    } catch (error) {
+      console.error('❌ Got Friends scraping failed:', error);
+      return [];
+    }
+  }
 }

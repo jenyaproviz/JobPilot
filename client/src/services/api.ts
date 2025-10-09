@@ -31,7 +31,7 @@ export const jobsApi = {
     if (query.limit) params.append('limit', query.limit.toString());
     
     // Add sources for Israeli job sites
-    params.append('sources', 'alljobs,drushim,jobmaster');
+    params.append('sources', 'alljobs,drushim,techit');
     
     console.log('🇮🇱 Searching Israeli jobs from multiple sources:', params.toString());
 

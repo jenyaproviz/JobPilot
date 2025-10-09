@@ -16,7 +16,7 @@ export class JobAggregatorService {
   }
 
   async searchJobs(request: SearchJobsRequest): Promise<IJob[]> {
-    const { keywords, location = 'Israel', sources = ['alljobs', 'drushim'], limit = 20 } = request;
+    const { keywords, location = 'Israel', sources = ['alljobs', 'drushim', 'jobmaster'], limit = 20 } = request;
     const allJobs: IJob[] = [];
     const perSourceLimit = Math.ceil(limit / sources.length);
 
@@ -30,6 +30,10 @@ export class JobAggregatorService {
             return await this.israeliScraper.scrapeAllJobs(keywords, location, perSourceLimit);
           case 'drushim':
             return await this.israeliScraper.scrapeDrushim(keywords, location, perSourceLimit);
+          case 'techit':
+            return await this.israeliScraper.scrapeTechIt(keywords, location, perSourceLimit);
+          case 'jobnet':
+            return await this.israeliScraper.scrapeJobNet(keywords, location, perSourceLimit);
           case 'jobmaster':
             return await this.israeliScraper.scrapeJobMaster(keywords, location, perSourceLimit);
           case 'gotfriends':
