@@ -3,11 +3,19 @@
   "version": "1.0.0",
   "description": "AI-Powered Job Search Engine",
   "scripts": {
+    "build": "cd client && npm install && npm run build",
     "start": "npm run start:server & npm run start:client",
     "start:server": "cd server && npm start",
     "start:client": "cd client && npm run dev",
     "install:all": "cd server && npm install && cd ../client && npm install",
     "dev": "npm run start:server & npm run start:client"
+  },
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
   },
   "keywords": [
     "job search",
