@@ -42,6 +42,22 @@ export interface JobSearchQuery {
 }
 
 export interface JobSearchResponse {
+  success: boolean;
+  query: {
+    keywords: string;
+    location: string;
+    sources: string[];
+    limit: number;
+  };
+  results: {
+    count: number;
+    jobs: Job[];
+  };
+  timestamp: string;
+}
+
+// Legacy interface for backward compatibility
+export interface LegacyJobSearchResponse {
   jobs: Job[];
   totalCount: number;
   page: number;

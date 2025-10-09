@@ -22,7 +22,7 @@ api.interceptors.response.use(
 
 export const jobsApi = {
   // Search jobs with Israeli job sites scraping
-  searchJobs: (query: JobSearchQuery): Promise<ApiResponse<JobSearchResponse>> => {
+  searchJobs: (query: JobSearchQuery): Promise<JobSearchResponse> => {
     const params = new URLSearchParams();
     
     // Map frontend parameters to job search API

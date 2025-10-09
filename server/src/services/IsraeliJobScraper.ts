@@ -1,5 +1,6 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
+import puppeteer from 'puppeteer';
 import { IJob } from '../types/index';
 
 export class IsraeliJobScraper {
@@ -16,9 +17,11 @@ export class IsraeliJobScraper {
     try {
       console.log(`🇮🇱 Scraping AllJobs.co.il for: "${keywords}"`);
       
-      // Updated AllJobs.co.il search URL structure
+      // Updated AllJobs.co.il search URL structure - now uses homepage with query parameter
       const baseUrl = 'https://www.alljobs.co.il';
-      const searchUrl = `${baseUrl}/Jobs/SearchJobs.aspx?FreeText=${encodeURIComponent(keywords)}&page=1`;
+      const searchUrl = `${baseUrl}/?q=${encodeURIComponent(keywords)}`;
+      
+      console.log(`📡 Requesting URL: ${searchUrl}`);
       
       const response = await axios.get(searchUrl, { 
         headers: this.headers,
@@ -26,8 +29,17 @@ export class IsraeliJobScraper {
         maxRedirects: 5
       });
       
+      console.log(`📄 Response status: ${response.status}`);
+      console.log(`📄 Response length: ${response.data.length}`);
+      
       const $ = cheerio.load(response.data);
       const jobs: IJob[] = [];
+      
+      // Debug: Check what selectors are available
+      console.log(`🔍 Found elements: .JobListRow=${$('.JobListRow').length}, .JobListItem=${$('.JobListItem').length}, .job-row=${$('.job-row').length}, .job-item=${$('.job-item').length}`);
+      console.log(`🔍 Job-related IDs: #aj-popular-jobs=${$('#aj-popular-jobs').length}, [id*="job"]=${$('[id*="job" i]').length}`);
+      console.log(`🔍 Page title: ${$('title').text()}`);
+      console.log(`🔍 Total elements on page: divs=${$('div').length}, links=${$('a').length}`);
       
       // Updated selectors for AllJobs current structure
       $('.JobListRow, .JobListItem, .job-row, .job-item').each((index, element) => {
@@ -68,13 +80,17 @@ export class IsraeliJobScraper {
         }
       });
       
+      if (jobs.length === 0) {
+        console.log('⚠️  AllJobs: No jobs found. This may be because AllJobs.co.il now uses JavaScript to dynamically load job listings.');
+        console.log('💡 Consider using Puppeteer for dynamic content or alternative job sites like Drushim.');
+      }
+      
       console.log(`✅ AllJobs: Found ${jobs.length} jobs`);
       return jobs;
       
     } catch (error) {
       console.error('❌ AllJobs scraping failed:', error);
-      // Return empty array if scraping fails - no mock data
-      console.log('🚫 No fallback mock data - returning empty results');
+      console.log('🚫 Returning empty results for AllJobs');
       return [];
     }
   }
@@ -141,54 +157,96 @@ export class IsraeliJobScraper {
   }
 
   async scrapeDrushim(keywords: string, location: string = '', limit: number = 10): Promise<IJob[]> {
+    // Use Puppeteer for better dynamic content handling
+    let browser = null;
     try {
-      console.log(`💼 Scraping Drushim.co.il for: "${keywords}"`);
+      console.log(`💼 Scraping Drushim.co.il with Puppeteer for: "${keywords}"`);
+      
+      browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+      });
+      
+      const page = await browser.newPage();
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36');
+      await page.setViewport({ width: 1366, height: 768 });
       
       const searchUrl = `https://www.drushim.co.il/jobs/search/?q=${encodeURIComponent(keywords)}`;
+      console.log(`📡 Puppeteer navigating to: ${searchUrl}`);
       
-      const response = await axios.get(searchUrl, { 
-        headers: this.headers,
-        timeout: 15000
-      });
+      await page.goto(searchUrl, { waitUntil: 'networkidle0', timeout: 30000 });
       
-      const $ = cheerio.load(response.data);
-      const jobs: IJob[] = [];
+      // Wait for job results to load
+      await new Promise(resolve => setTimeout(resolve, 3000));
       
-      $('.job-item-wrapper, .job-result, .position').each((index, element) => {
-        if (index >= limit) return false;
+      console.log(`🔍 Extracting job data from Drushim...`);
+      
+      const jobs = await page.evaluate((limit: number) => {
+        const jobElements = document.querySelectorAll('.job-item-wrapper, .job-result, .position, .job-card, [class*="job"]');
+        const extractedJobs: any[] = [];
         
-        const $job = $(element);
-        const title = $job.find('.job-link, .job-title, h2').first().text().trim();
-        const company = $job.find('.employer, .company').first().text().trim();
-        const location = $job.find('.location, .area').first().text().trim() || 'Israel';
-        const description = $job.find('.job-teaser, .description').first().text().trim();
-        const jobLink = $job.find('a.job-link, a').first().attr('href');
-        const fullUrl = jobLink ? (jobLink.startsWith('http') ? jobLink : `https://www.drushim.co.il${jobLink}`) : searchUrl;
+        console.log(`Found ${jobElements.length} potential job elements on Drushim`);
         
-        if (title && company) {
-          jobs.push({
-            _id: `drushim_${Date.now()}_${index}`,
-            title,
-            company,
-            location,
-            description: description || `${title} role at ${company}`,
-            salary: undefined,
-            employmentType: 'full-time' as const,
-            experienceLevel: this.extractExperienceLevel(title, description),
-            postedDate: new Date(),
-            originalUrl: fullUrl,
-            source: 'Drushim.co.il',
-            requirements: this.extractSkillsFromText(title + ' ' + description),
-            keywords: [keywords, 'israel', 'drushim'],
-            benefits: [],
-            isActive: true,
-            scrapedAt: new Date()
-          });
-        }
-      });
+        jobElements.forEach((element, index) => {
+          if (index >= limit) return;
+          
+          // Try multiple selectors for title
+          const titleElement = element.querySelector('.job-link, .job-title, h2, h3, .title, [class*="title"]') as HTMLElement;
+          const title = titleElement ? titleElement.innerText.trim() : '';
+          
+          // Try multiple selectors for company
+          const companyElement = element.querySelector('.employer, .company, .company-name, [class*="company"]') as HTMLElement;
+          const company = companyElement ? companyElement.innerText.trim() : '';
+          
+          // Try multiple selectors for location
+          const locationElement = element.querySelector('.location, .area, .city, [class*="location"]') as HTMLElement;
+          const jobLocation = locationElement ? locationElement.innerText.trim() : 'Israel';
+          
+          // Try to get description
+          const descElement = element.querySelector('.job-teaser, .description, .desc, .summary') as HTMLElement;
+          const description = descElement ? descElement.innerText.trim() : '';
+          
+          // Try to get job link
+          const linkElement = element.querySelector('a.job-link, a[href*="/job"], a') as HTMLAnchorElement;
+          const jobLink = linkElement ? linkElement.href : '';
+          
+          if (title && company) {
+            extractedJobs.push({
+              title,
+              company,
+              location: jobLocation,
+              description: description || `${title} position at ${company}`,
+              originalUrl: jobLink,
+              elementHTML: element.outerHTML.substring(0, 300) // For debugging
+            });
+          }
+        });
+        
+        return extractedJobs;
+      }, limit);
       
-      console.log(`✅ Drushim: Found ${jobs.length} jobs`);
-      return jobs;
+      // Convert to IJob format
+      const formattedJobs: IJob[] = jobs.map((job, index) => ({
+        _id: `drushim_puppeteer_${Date.now()}_${index}`,
+        title: job.title,
+        company: job.company,
+        location: job.location,
+        description: job.description,
+        salary: undefined,
+        employmentType: 'full-time' as const,
+        experienceLevel: this.extractExperienceLevel(job.title, job.description),
+        postedDate: new Date(),
+        originalUrl: job.originalUrl || searchUrl,
+        source: 'Drushim.co.il (Puppeteer)',
+        requirements: this.extractSkillsFromText(job.title + ' ' + job.description),
+        keywords: [keywords, 'israel', 'drushim'],
+        benefits: ['Israeli Job Market'],
+        isActive: true,
+        scrapedAt: new Date()
+      }));
+      
+      console.log(`✅ Drushim (Puppeteer): Found ${formattedJobs.length} jobs`);
+      return formattedJobs;
       
     } catch (error) {
       console.error('❌ Drushim scraping failed:', error);

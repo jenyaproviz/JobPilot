@@ -29,6 +29,7 @@ app.use("/api/jobs", jobRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/job-sites", jobSitesRoutes);
 app.use("/api/job-search", jobSearchRoutes);
+app.use("/api/job-search", jobSearchRoutes);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {

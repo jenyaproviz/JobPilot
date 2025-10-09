@@ -47,13 +47,18 @@ export const searchJobs = createAsyncThunk(
   async (query: JobSearchQuery, { rejectWithValue }) => {
     try {
       const response = await jobsApi.searchJobs(query);
-      if (response.success) {
-        return response.data as JobSearchResponse;
+      console.log('Job Search API Response:', response);
+      console.log('Response structure:', JSON.stringify(response, null, 2));
+      
+      if (response && response.success) {
+        return response;
       } else {
-        throw new Error(response.message);
+        console.error('API response indicates failure:', response);
+        throw new Error((response as any)?.message || 'Search failed');
       }
     } catch (error: any) {
-      return rejectWithValue(error.message || 'Failed to search jobs');
+      console.error('Search jobs error:', error);
+      return rejectWithValue(error.message || error.error || 'Failed to search jobs');
     }
   }
 );
@@ -123,11 +128,27 @@ const jobsSlice = createSlice({
       })
       .addCase(searchJobs.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.jobs = action.payload.jobs;
-        state.totalCount = action.payload.totalCount;
-        state.currentPage = action.payload.page;
-        state.totalPages = action.payload.totalPages;
-        state.filters = action.payload.filters;
+        // Handle the new API response structure: { success: true, results: { jobs: [...], count: 5 } }
+        const response = action.payload as JobSearchResponse;
+        
+        if (response.results) {
+          state.jobs = response.results.jobs || [];
+          state.totalCount = response.results.count || 0;
+        } else {
+          // Fallback for legacy structure or direct access
+          state.jobs = (response as any).jobs || [];
+          state.totalCount = (response as any).totalCount || (response as any).count || 0;
+        }
+        
+        state.currentPage = state.searchQuery.page || 1;
+        state.totalPages = Math.ceil(state.totalCount / (state.searchQuery.limit || 20));
+        
+        // Update filters based on current search
+        const sources = response.query?.sources || [];
+        state.filters = {
+          ...state.filters,
+          sources: sources
+        };
       })
       .addCase(searchJobs.rejected, (state, action) => {
         state.isLoading = false;

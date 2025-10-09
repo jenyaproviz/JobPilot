@@ -25,8 +25,10 @@ export class JobAggregatorService {
     // Scrape from multiple sources in parallel
     const scrapePromises = sources.map(async (source) => {
       try {
+        console.log(`🔄 JobAggregator: About to scrape ${source} with keywords: ${keywords}`);
         switch (source.toLowerCase()) {
           case 'alljobs':
+            console.log(`📞 JobAggregator: Calling scrapeAllJobs for ${keywords}`);
             return await this.israeliScraper.scrapeAllJobs(keywords, location, perSourceLimit);
           case 'drushim':
             return await this.israeliScraper.scrapeDrushim(keywords, location, perSourceLimit);
