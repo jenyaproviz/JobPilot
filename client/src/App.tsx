@@ -7,6 +7,8 @@ import { store } from './store';
 import { jobsApi } from './services/api';
 import JobSitesView from './components/JobSitesView';
 import ContactForm from './components/ContactForm';
+import JobSearchForm from './components/JobSearchForm';
+import JobList from './components/JobList';
 
 const AppContent: React.FC = () => {
   const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking');
@@ -114,6 +116,12 @@ const AppContent: React.FC = () => {
           </div>
         )}
 
+        {/* Job Search Form */}
+        <JobSearchForm />
+        
+        {/* Job Search Results */}
+        <JobList />
+        
         {/* Job Sites Directory */}
         <JobSitesView />
       </main>
