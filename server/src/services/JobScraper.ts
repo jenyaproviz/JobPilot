@@ -93,7 +93,7 @@ export class JobScraper {
         const jobCard = jobCards.eq(i);
         
         try {
-          const job = await this.extractJobData(jobCard, config, $);
+          const job = this.extractJobData(jobCard, config, $);
           if (job && this.isValidJob(job)) {
             jobs.push(job);
           }
@@ -120,7 +120,7 @@ export class JobScraper {
     return url;
   }
 
-  private extractJobData(jobCard: cheerio.Cheerio<any>, config: IScrapingConfig, $: cheerio.CheerioAPI): IJob | null {
+  private extractJobData(jobCard: any, config: IScrapingConfig, $: any): IJob | null {
     try {
       const title = this.extractText(jobCard, config.selectors.title, $);
       const company = this.extractText(jobCard, config.selectors.company, $);
@@ -162,12 +162,12 @@ export class JobScraper {
     }
   }
 
-  private extractText(element: cheerio.Cheerio<any>, selector: string, $: cheerio.CheerioAPI): string {
+  private extractText(element: any, selector: string, $: any): string {
     const found = element.find(selector).first();
     return found.length > 0 ? found.text().trim() : '';
   }
 
-  private extractLink(element: cheerio.Cheerio<any>, selector: string, baseUrl: string, $: cheerio.CheerioAPI): string {
+  private extractLink(element: any, selector: string, baseUrl: string, $: any): string {
     const linkElement = element.find(selector).first();
     let href = linkElement.attr('href') || '';
     
