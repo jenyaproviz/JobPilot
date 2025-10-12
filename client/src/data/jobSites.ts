@@ -101,6 +101,33 @@ export const JOB_SITES: JobSite[] = [
     location: 'Israel',
     category: 'Aerospace & Defense'
   },
+  {
+    id: 'elbit-systems',
+    name: 'Elbit Systems Career',
+    url: 'https://elbitsystemscareer.com/',
+    description: 'Leading defense technology company offering cutting-edge opportunities in aerospace, military systems, and advanced technology.',
+    location: 'Israel',
+    category: 'Aerospace & Defense',
+    featured: true
+  },
+  {
+    id: 'jobify360',
+    name: 'Jobify360',
+    url: 'https://jobify360.co.il/',
+    description: 'Modern Israeli job platform offering comprehensive career opportunities with advanced search features and personalized job matching.',
+    location: 'Israel',
+    category: 'General Jobs',
+    featured: true
+  },
+  {
+    id: 'devjobs',
+    name: 'DevJobs',
+    url: 'https://devjobs.co.il/',
+    description: 'Specialized developer job board focusing on programming, software engineering, and tech positions in Israel.',
+    location: 'Israel',
+    category: 'Tech Jobs',
+    featured: true
+  },
 
   // International Job Sites
   {
@@ -128,6 +155,15 @@ export const JOB_SITES: JobSite[] = [
     description: 'Professional network\'s job platform with global opportunities, networking features, and career insights.',
     location: 'Global',
     category: 'Professional Network',
+    featured: true
+  },
+  {
+    id: 'ziprecruiter',
+    name: 'ZipRecruiter',
+    url: 'https://www.ziprecruiter.com/jobs-search',
+    description: 'AI-powered job matching platform connecting job seekers with employers across various industries worldwide.',
+    location: 'Global',
+    category: 'General Jobs',
     featured: true
   }
 ];

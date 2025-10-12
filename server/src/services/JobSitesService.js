@@ -148,6 +148,48 @@ class JobSitesService {
           established: '1953'
         }
       },
+      {
+        id: 'elbit-systems',
+        name: 'Elbit Systems Career',
+        url: 'https://elbitsystemscareer.com/',
+        description: 'Leading defense technology company offering cutting-edge opportunities in aerospace, military systems, and advanced technology.',
+        location: 'Israel',
+        category: 'Aerospace & Defense',
+        featured: true,
+        stats: {
+          avgJobsPosted: '30+ daily',
+          industries: 'Defense & Aerospace',
+          established: '1966'
+        }
+      },
+      {
+        id: 'jobify360',
+        name: 'Jobify360',
+        url: 'https://jobify360.co.il/',
+        description: 'Modern Israeli job platform offering comprehensive career opportunities with advanced search features and personalized job matching.',
+        location: 'Israel',
+        category: 'General Jobs',
+        featured: true,
+        stats: {
+          avgJobsPosted: '250+ daily',
+          industries: 'All Industries',
+          established: '2020'
+        }
+      },
+      {
+        id: 'devjobs',
+        name: 'DevJobs',
+        url: 'https://devjobs.co.il/',
+        description: 'Specialized developer job board focusing on programming, software engineering, and tech positions in Israel.',
+        location: 'Israel',
+        category: 'Tech Jobs',
+        featured: true,
+        stats: {
+          avgJobsPosted: '100+ daily',
+          industries: 'Software Development',
+          established: '2018'
+        }
+      },
 
       // International Job Sites
       {
@@ -190,6 +232,20 @@ class JobSitesService {
           avgJobsPosted: '15,000+ daily',
           industries: 'All Industries',
           established: '2003'
+        }
+      },
+      {
+        id: 'ziprecruiter',
+        name: 'ZipRecruiter',
+        url: 'https://www.ziprecruiter.com/jobs-search',
+        description: 'AI-powered job matching platform connecting job seekers with employers across various industries worldwide.',
+        location: 'Global',
+        category: 'General Jobs',
+        featured: true,
+        stats: {
+          avgJobsPosted: '8,000+ daily',
+          industries: 'All Industries',
+          established: '2010'
         }
       }
     ];

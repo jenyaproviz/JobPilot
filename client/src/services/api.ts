@@ -21,21 +21,21 @@ api.interceptors.response.use(
 );
 
 export const jobsApi = {
-  // Search jobs with Israeli job sites scraping
+  // Search jobs with Google search integration
   searchJobs: (query: JobSearchQuery): Promise<JobSearchResponse> => {
     const params = new URLSearchParams();
     
-    // Map frontend parameters to job search API
+    // Map frontend parameters to Google job search API
     if (query.keywords) params.append('q', query.keywords);
     if (query.location) params.append('location', query.location);
     if (query.limit) params.append('limit', query.limit.toString());
+    if (query.experienceLevel) params.append('experienceLevel', query.experienceLevel);
+    if (query.employmentType) params.append('employmentType', query.employmentType);
+    if (query.datePosted) params.append('datePosted', query.datePosted);
     
-    // Add sources for Israeli job sites
-    params.append('sources', 'alljobs,drushim,techit');
-    
-    console.log('🇮🇱 Searching Israeli jobs from multiple sources:', params.toString());
+    console.log('🔍 Searching jobs with Google integration:', params.toString());
 
-    return api.get(`/job-search/search?${params.toString()}`);
+    return api.get(`/google-jobs/search?${params.toString()}`);
   },
 
   // Get trending job keywords

@@ -1,13 +1,16 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
 import { connectDB } from "./config/db";
 import jobRoutes from "./routes/jobs";
 import contactRoutes from "./routes/contact";
 import jobSitesRoutes from "./routes/jobSites";
 import jobSearchRoutes from "./routes/jobSearch";
+import googleJobsRoutes from "./routes/googleJobs";
 
-dotenv.config();
+// Load environment variables from server directory
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const app = express();
 
@@ -25,24 +28,25 @@ app.use(cors({
 app.use(express.json());
 
 // Routes
-app.use("/api/jobs", jobRoutes);
+app.use("/api/jobs", googleJobsRoutes); // Use Google search instead of complex scraping
 app.use("/api/contact", contactRoutes);
 app.use("/api/job-sites", jobSitesRoutes);
 app.use("/api/job-search", jobSearchRoutes);
-app.use("/api/job-search", jobSearchRoutes);
+app.use("/api/google-jobs", googleJobsRoutes); // Alternative endpoint
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
   res.json({ 
     status: "OK", 
-    message: "JobPilot Intelligent Server is running",
+    message: "JobPilot Google Search Server is running",
     features: [
-      "AI-powered job matching",
-      "Intelligent keyword optimization", 
-      "Personalized recommendations",
-      "Market trend analysis",
-      "MCP (Model Context Protocol) integration"
+      "Google-powered job search",
+      "Reliable job discovery", 
+      "Multiple job site integration",
+      "Clean and simple results",
+      "No server crashes"
     ],
+    searchType: "google",
     timestamp: new Date().toISOString()
   });
 });

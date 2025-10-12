@@ -76,11 +76,20 @@ const JobCard: React.FC<JobCardProps> = ({ job, onSave, onViewDetails }) => {
             <Bookmark className="w-5 h-5" />
           </button>
           <a
-            href={job.originalUrl || job.url || '#'}
+            href={(job.originalUrl && job.originalUrl !== '#') ? job.originalUrl : (job.url && job.url !== '#') ? job.url : undefined}
             target="_blank"
             rel="noopener noreferrer"
-            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            className={`p-2 transition-colors ${
+              (job.originalUrl && job.originalUrl !== '#') || (job.url && job.url !== '#')
+                ? 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
+                : 'text-gray-300 cursor-not-allowed'
+            } rounded-lg`}
             title="View original posting"
+            onClick={(e) => {
+              if (!(job.originalUrl && job.originalUrl !== '#') && !(job.url && job.url !== '#')) {
+                e.preventDefault();
+              }
+            }}
           >
             <ExternalLink className="w-5 h-5" />
           </a>
@@ -171,18 +180,12 @@ const JobCard: React.FC<JobCardProps> = ({ job, onSave, onViewDetails }) => {
       )}
 
       {/* Actions */}
-      <div className="flex gap-3 pt-4 border-t border-gray-100">
+      <div className="pt-4 border-t border-gray-100">
         <button
           onClick={() => onViewDetails?.(job)}
-          className="flex-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          className="w-full px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
         >
           View Details
-        </button>
-        <button
-          onClick={() => window.open(job.originalUrl || job.url || '#', '_blank')}
-          className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          Apply
         </button>
       </div>
     </div>

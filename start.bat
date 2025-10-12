@@ -6,7 +6,7 @@ echo.
 
 echo Starting JobPilot Backend Server...
 cd server
-start "JobPilot Server" powershell -NoExit -Command "node google-job-server.js"
+start "JobPilot Server" powershell -NoExit -Command "npm start"
 
 echo Waiting for server to start...
 timeout /t 3 /nobreak > nul
@@ -19,7 +19,7 @@ echo.
 echo ================================
 echo JobPilot is starting up!
 echo ================================
-echo Backend Server: http://localhost:3001
+echo Backend Server: http://localhost:5000
 echo Frontend Client: http://localhost:5173
 echo.
 echo Press any key to open the application in your browser...

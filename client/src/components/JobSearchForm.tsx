@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Filter, Briefcase, Zap, TrendingUp } from 'lucide-react';
+import { Search, MapPin, Filter, Briefcase, TrendingUp } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../hooks/redux';
-import { searchJobs, scrapeJobs, setSearchQuery } from '../store/jobsSlice';
+import { searchJobs, setSearchQuery } from '../store/jobsSlice';
 import { jobsApi } from '../services/api';
 
 const JobSearchForm: React.FC = () => {
@@ -59,18 +59,7 @@ const JobSearchForm: React.FC = () => {
     dispatch(searchJobs(query));
   };
 
-  const handleScrape = () => {
-    if (!localQuery.keywords.trim()) {
-      alert('Please enter job keywords to scrape');
-      return;
-    }
-
-    dispatch(scrapeJobs({
-      keywords: localQuery.keywords,
-      location: localQuery.location || undefined,
-      maxJobsPerSite: 50
-    }));
-  };
+  // Removed scraping functionality - using Google search instead
 
   const handleInputChange = (field: string, value: string) => {
     setLocalQuery(prev => ({ ...prev, [field]: value }));
@@ -182,17 +171,7 @@ const JobSearchForm: React.FC = () => {
             </select>
           </div>
 
-          <div className="pt-7">
-            <button
-              type="button"
-              onClick={handleScrape}
-              disabled={isLoading}
-              className="px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-            >
-              <Zap className="w-4 h-4" />
-              {isLoading ? 'Scraping...' : 'Scrape Fresh Jobs'}
-            </button>
-          </div>
+
         </div>
       </form>
       
@@ -229,10 +208,34 @@ const JobSearchForm: React.FC = () => {
         <ul className="text-sm text-blue-800 space-y-1">
           <li>• Try specific technologies: "React TypeScript", "Node.js Express"</li>
           <li>• Use job titles: "Frontend Developer", "DevOps Engineer"</li>
-          <li>• Click "Scrape Fresh Jobs" to get the latest postings from Israeli job sites</li>
-          <li>• We search AllJobs, Drushim, and other top Israeli job portals</li>
+          <li>• Our intelligent search finds jobs from multiple sources using Google</li>
+          <li>• Include location for more targeted results: "Tel Aviv", "Remote"</li>
+          <li>• Use filters to narrow down by experience level and employment type</li>
         </ul>
       </div>
+
+      {/* Google Search Link */}
+      {localQuery.keywords && (
+        <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-medium text-green-900 mb-1">🔍 Search Directly on Google</h4>
+              <p className="text-sm text-green-700">Open our custom job search engine in a new tab</p>
+            </div>
+            <a
+              href={`https://cse.google.com/cse?cx=a3736d241b91c440e&q=${encodeURIComponent(
+                localQuery.keywords + (localQuery.location ? ' ' + localQuery.location : '')
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors flex items-center gap-2"
+            >
+              <Search className="w-4 h-4" />
+              Search on Google
+            </a>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

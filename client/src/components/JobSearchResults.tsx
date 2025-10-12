@@ -65,7 +65,13 @@ const JobSearchResults: React.FC = () => {
             key={job._id}
             job={job}
             onSave={() => console.log('Save job:', job._id)}
-            onViewDetails={() => console.log('View details:', job)}
+            onViewDetails={() => {
+              if (job.originalUrl && job.originalUrl !== '#') {
+                window.open(job.originalUrl, '_blank', 'noopener,noreferrer');
+              } else {
+                console.log('No valid URL for job:', job);
+              }
+            }}
           />
         ))}
       </div>
