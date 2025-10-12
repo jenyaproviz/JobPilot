@@ -43,13 +43,20 @@ export interface JobSearchQuery {
 
 export interface JobSearchResponse {
   success: boolean;
-  query: {
+  jobs: Job[];
+  totalCount: number;
+  totalResultsAvailable?: number; // Total results from Google (e.g., 81,900)
+  maxResultsReturnable?: number; // API limitation (e.g., 100)
+  currentPage: number;
+  totalPages: number;
+  resultsPerPage: number;
+  query?: {
     keywords: string;
     location: string;
     sources: string[];
     limit: number;
   };
-  results: {
+  results?: {
     count: number;
     jobs: Job[];
   };

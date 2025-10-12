@@ -34,6 +34,12 @@ interface JobResult {
   scrapedAt: Date;
 }
 
+interface JobSearchResult {
+  jobs: JobResult[];
+  totalResultsAvailable: number;
+  maxResultsReturnable: number;
+}
+
 export class GoogleJobSearchService {
   private get apiKey(): string {
     return process.env.GOOGLE_API_KEY || '';
@@ -47,7 +53,7 @@ export class GoogleJobSearchService {
     // Environment variables will be checked at runtime, not construction time
   }
 
-  async searchJobs(keywords: string, location: string = '', limit: number = 20): Promise<JobResult[]> {
+  async searchJobs(keywords: string, location: string = '', limit: number = 200): Promise<JobSearchResult> {
     console.log(`🔍 Google search for jobs: "${keywords}" in ${location || 'Any location'}`);
     
     try {
@@ -61,22 +67,61 @@ export class GoogleJobSearchService {
 
       console.log(`🌍 Searching Google with query: "${searchQuery}"`);
       
-      const response = await axios.get<GoogleSearchResponse>('https://www.googleapis.com/customsearch/v1', {
-        params: {
-          key: this.apiKey,
-          cx: this.searchEngineId,
-          q: searchQuery,
-          num: Math.min(limit, 10), // Google API limits to 10 results per request
-        },
-        timeout: 15000
-      });
+      // Google API limits to 10 results per request, so we make multiple requests if needed
+      const maxPerRequest = 10;
+      const totalRequests = Math.ceil(Math.min(limit, 100) / maxPerRequest); // Cap at 100 total results
+      const allResults: GoogleSearchResult[] = [];
+      let totalResultsAvailable = 0;
 
-      if (response.data.items && response.data.items.length > 0) {
-        console.log(`✅ Found ${response.data.items.length} real job results from Google`);
-        return this.parseGoogleResults(response.data.items, keywords, location);
+      for (let requestIndex = 0; requestIndex < totalRequests; requestIndex++) {
+        const startIndex = requestIndex * maxPerRequest + 1;
+        const numResults = Math.min(maxPerRequest, limit - allResults.length);
+        
+        if (numResults <= 0) break;
+
+        try {
+          const response = await axios.get<GoogleSearchResponse>('https://www.googleapis.com/customsearch/v1', {
+            params: {
+              key: this.apiKey,
+              cx: this.searchEngineId,
+              q: searchQuery,
+              num: numResults,
+              start: startIndex
+            },
+            timeout: 15000
+          });
+
+          // Capture total results from first response
+          if (requestIndex === 0 && response.data.searchInformation?.totalResults) {
+            totalResultsAvailable = parseInt(response.data.searchInformation.totalResults);
+            console.log(`📊 Google reports ${totalResultsAvailable.toLocaleString()} total results available`);
+          }
+
+          if (response.data.items && response.data.items.length > 0) {
+            allResults.push(...response.data.items);
+            console.log(`✅ Request ${requestIndex + 1}: Found ${response.data.items.length} results (total: ${allResults.length})`);
+          }
+        } catch (requestError: any) {
+          console.error(`❌ Google search request ${requestIndex + 1} error:`, requestError.message);
+          // Continue with other requests even if one fails
+          break;
+        }
+      }
+
+      if (allResults.length > 0) {
+        console.log(`✅ Found ${allResults.length} job results from Google (${totalResultsAvailable.toLocaleString()} total available)`);
+        return {
+          jobs: this.parseGoogleResults(allResults, keywords, location),
+          totalResultsAvailable: totalResultsAvailable,
+          maxResultsReturnable: 100 // Google API limitation
+        };
       } else {
         console.log('❌ No job results found from Google Custom Search');
-        return [];
+        return {
+          jobs: [],
+          totalResultsAvailable: totalResultsAvailable,
+          maxResultsReturnable: 100
+        };
       }
 
     } catch (error: any) {

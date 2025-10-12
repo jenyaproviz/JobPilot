@@ -29,6 +29,7 @@ export const jobsApi = {
     if (query.keywords) params.append('q', query.keywords);
     if (query.location) params.append('location', query.location);
     if (query.limit) params.append('limit', query.limit.toString());
+    if (query.page) params.append('page', query.page.toString());
     if (query.experienceLevel) params.append('experienceLevel', query.experienceLevel);
     if (query.employmentType) params.append('employmentType', query.employmentType);
     if (query.datePosted) params.append('datePosted', query.datePosted);

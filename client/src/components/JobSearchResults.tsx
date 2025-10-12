@@ -1,11 +1,15 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
 import { Loader2, AlertCircle, Briefcase } from 'lucide-react';
+import { useAppDispatch } from '../hooks/redux';
+import { searchJobs, setSearchQuery } from '../store/jobsSlice';
 import type { RootState } from '../store';
 import JobCard from './JobCard';
+import Pagination from './Pagination';
 
 const JobSearchResults: React.FC = () => {
-  const { jobs, isLoading, error, searchQuery } = useSelector((state: RootState) => state.jobs);
+  const dispatch = useAppDispatch();
+  const { jobs, isLoading, error, searchQuery, totalCount, totalResultsAvailable, maxResultsReturnable, currentPage } = useSelector((state: RootState) => state.jobs);
 
   // Don't show anything if no search has been performed
   if (!isLoading && !error && jobs.length === 0 && !searchQuery.keywords) {
@@ -77,9 +81,24 @@ const JobSearchResults: React.FC = () => {
       </div>
       
       {jobs.length > 0 && (
-        <div className="mt-6 text-center text-gray-500 text-sm">
-          Showing {jobs.length} results from Israeli job sites
-        </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={Math.ceil((totalResultsAvailable ? Math.min(totalResultsAvailable, maxResultsReturnable || 100) : totalCount) / (searchQuery.limit || 25))}
+          totalResults={totalCount}
+          totalResultsAvailable={totalResultsAvailable}
+          maxResultsReturnable={maxResultsReturnable}
+          resultsPerPage={searchQuery.limit || 25}
+          onPageChange={(page) => {
+            const newQuery = { ...searchQuery, page };
+            dispatch(setSearchQuery(newQuery));
+            dispatch(searchJobs(newQuery));
+          }}
+          onResultsPerPageChange={(resultsPerPage) => {
+            const newQuery = { ...searchQuery, limit: resultsPerPage, page: 1 };
+            dispatch(setSearchQuery(newQuery));
+            dispatch(searchJobs(newQuery));
+          }}
+        />
       )}
     </div>
   );

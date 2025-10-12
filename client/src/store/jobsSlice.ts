@@ -6,6 +6,8 @@ import { jobsApi } from '../services/api';
 export interface JobsState {
   jobs: Job[];
   totalCount: number;
+  totalResultsAvailable?: number; // Total results from Google
+  maxResultsReturnable?: number; // API limitation
   currentPage: number;
   totalPages: number;
   filters: {
@@ -23,6 +25,8 @@ export interface JobsState {
 const initialState: JobsState = {
   jobs: [],
   totalCount: 0,
+  totalResultsAvailable: undefined,
+  maxResultsReturnable: undefined,
   currentPage: 1,
   totalPages: 0,
   filters: {
@@ -128,20 +132,16 @@ const jobsSlice = createSlice({
       })
       .addCase(searchJobs.fulfilled, (state, action) => {
         state.isLoading = false;
-        // Handle the new API response structure: { success: true, results: { jobs: [...], count: 5 } }
+        // Handle the new API response structure with pagination
         const response = action.payload as JobSearchResponse;
         
-        if (response.results) {
-          state.jobs = response.results.jobs || [];
-          state.totalCount = response.results.count || 0;
-        } else {
-          // Fallback for legacy structure or direct access
-          state.jobs = (response as any).jobs || [];
-          state.totalCount = (response as any).totalCount || (response as any).count || 0;
-        }
-        
-        state.currentPage = state.searchQuery.page || 1;
-        state.totalPages = Math.ceil(state.totalCount / (state.searchQuery.limit || 20));
+        // Use the new response structure with pagination
+        state.jobs = response.jobs || [];
+        state.totalCount = response.totalCount || 0;
+        state.totalResultsAvailable = response.totalResultsAvailable;
+        state.maxResultsReturnable = response.maxResultsReturnable;
+        state.currentPage = response.currentPage || 1;
+        state.totalPages = response.totalPages || 1;
         
         // Update filters based on current search
         const sources = response.query?.sources || [];

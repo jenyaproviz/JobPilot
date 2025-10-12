@@ -16,7 +16,7 @@ router.get('/google-search', async (req: Request, res: Response) => {
 
     console.log(`🔍 Google job search: "${keywords}" in ${location || 'any location'}`);
 
-    const jobs = await googleJobSearch.searchJobs(
+    const searchResult = await googleJobSearch.searchJobs(
       keywords as string, 
       location as string, 
       parseInt(limit as string)
@@ -24,12 +24,14 @@ router.get('/google-search', async (req: Request, res: Response) => {
 
     res.json({
       success: true,
-      jobs: jobs,
-      totalCount: jobs.length,
+      jobs: searchResult.jobs,
+      totalCount: searchResult.jobs.length,
+      totalResultsAvailable: searchResult.totalResultsAvailable,
+      maxResultsReturnable: searchResult.maxResultsReturnable,
       page: 1,
       totalPages: 1,
       searchParams: { keywords, location, limit: parseInt(limit as string) },
-      message: `Found ${jobs.length} jobs via Google search`,
+      message: `Found ${searchResult.totalResultsAvailable.toLocaleString()} total results (showing ${searchResult.jobs.length})`,
       searchType: 'google',
       timestamp: new Date().toISOString()
     });
@@ -51,24 +53,30 @@ router.get('/search', async (req: Request, res: Response) => {
       q: keywords = 'developer',
       keywords: altKeywords,
       location = '', 
-      limit = 20,
+      limit = 200,
+      page = 1,
       employmentType,
       experienceLevel,
       datePosted
     } = req.query;
 
     const searchKeywords = (keywords || altKeywords) as string;
+    const resultsLimit = parseInt(limit as string);
+    const currentPage = parseInt(page as string);
     
-    console.log(`🔍 Job search (Google): "${searchKeywords}" in ${location || 'any location'}`);
+    console.log(`🔍 Job search (Google): "${searchKeywords}" in ${location || 'any location'} - Page ${currentPage}, Limit ${resultsLimit}`);
 
-    const jobs = await googleJobSearch.searchJobs(
+    // Google Custom Search API limits us to 10 results per request, so we need to make multiple requests
+    // For now, we'll get more results by making multiple calls with different start indices
+    const maxResults = Math.min(resultsLimit, 100); // Cap at 100 results total
+    const searchResult = await googleJobSearch.searchJobs(
       searchKeywords, 
       location as string, 
-      parseInt(limit as string)
+      maxResults
     );
 
     // Apply filters if provided
-    let filteredJobs = jobs;
+    let filteredJobs = searchResult.jobs;
     
     if (employmentType && employmentType !== 'any') {
       filteredJobs = filteredJobs.filter(job => 
@@ -82,12 +90,30 @@ router.get('/search', async (req: Request, res: Response) => {
       );
     }
 
+    // Implement pagination for the available results (max 100)
+    const availableResults = filteredJobs.length;
+    
+    // Calculate total pages based on the maximum results we could potentially get
+    // Use the minimum of totalResultsAvailable and maxResultsReturnable for pagination calculations
+    const maxPaginationResults = Math.min(
+      searchResult.totalResultsAvailable, 
+      searchResult.maxResultsReturnable
+    );
+    const totalPages = Math.ceil(maxPaginationResults / resultsLimit);
+    
+    const startIndex = (currentPage - 1) * resultsLimit;
+    const endIndex = startIndex + resultsLimit;
+    const paginatedJobs = filteredJobs.slice(startIndex, endIndex);
+
     res.json({
       success: true,
-      jobs: filteredJobs,
-      totalCount: filteredJobs.length,
-      page: 1,
-      totalPages: 1,
+      jobs: paginatedJobs,
+      totalCount: availableResults, // Jobs we actually have
+      totalResultsAvailable: searchResult.totalResultsAvailable, // Total from Google
+      maxResultsReturnable: searchResult.maxResultsReturnable, // API limitation
+      currentPage: currentPage,
+      totalPages: totalPages,
+      resultsPerPage: resultsLimit,
       filters: { 
         keywords: searchKeywords, 
         location, 
@@ -98,9 +124,10 @@ router.get('/search', async (req: Request, res: Response) => {
       searchParams: { 
         keywords: searchKeywords, 
         location, 
-        limit: parseInt(limit as string) 
+        limit: resultsLimit,
+        page: currentPage
       },
-      message: `Found ${filteredJobs.length} jobs via Google search`,
+      message: `Found ${searchResult.totalResultsAvailable.toLocaleString()} total results. Showing ${paginatedJobs.length} jobs on page ${currentPage} (${availableResults} available through API)`,
       searchType: 'google',
       timestamp: new Date().toISOString()
     });
@@ -129,7 +156,7 @@ router.get('/', async (req: Request, res: Response) => {
     
     console.log(`🔍 Simple job search: "${searchKeywords}"`);
 
-    const jobs = await googleJobSearch.searchJobs(
+    const searchResult = await googleJobSearch.searchJobs(
       searchKeywords, 
       location as string, 
       parseInt(limit as string)
@@ -137,12 +164,14 @@ router.get('/', async (req: Request, res: Response) => {
 
     res.json({
       success: true,
-      jobs: jobs,
-      totalCount: jobs.length,
+      jobs: searchResult.jobs,
+      totalCount: searchResult.jobs.length,
+      totalResultsAvailable: searchResult.totalResultsAvailable,
+      maxResultsReturnable: searchResult.maxResultsReturnable,
       page: 1,
       totalPages: 1,
       searchParams: { query: searchKeywords, location, limit: parseInt(limit as string) },
-      message: `Found ${jobs.length} jobs`,
+      message: `Found ${searchResult.totalResultsAvailable.toLocaleString()} total results (showing ${searchResult.jobs.length})`,
       searchType: 'google',
       timestamp: new Date().toISOString()
     });
