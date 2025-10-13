@@ -2,6 +2,7 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import puppeteer from 'puppeteer';
 import { IJob } from '../types/index';
+import { PAGINATION_CONSTANTS } from '../constants/pagination';
 
 export class IsraeliJobScraper {
   private headers = {
@@ -312,7 +313,7 @@ export class IsraeliJobScraper {
     }
   }
 
-  async searchAllIsraeliSites(keywords: string, location: string = '', limit: number = 20): Promise<IJob[]> {
+  async searchAllIsraeliSites(keywords: string, location: string = '', limit: number = PAGINATION_CONSTANTS.DEFAULT_RESULTS_PER_PAGE): Promise<IJob[]> {
     console.log(`🇮🇱 Starting Israeli job search for: "${keywords}"`);
     console.log('🔍 Searching across Israeli job sites: AllJobs, TechIt, Drushim, JobNet...');
     

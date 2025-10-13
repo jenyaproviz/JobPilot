@@ -6,6 +6,7 @@ import { searchJobs, setSearchQuery } from '../store/jobsSlice';
 import type { RootState } from '../store';
 import JobCard from './JobCard';
 import Pagination from './Pagination';
+import { PAGINATION } from '../constants/pagination';
 
 const JobSearchResults: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -83,11 +84,11 @@ const JobSearchResults: React.FC = () => {
       {jobs.length > 0 && (
         <Pagination
           currentPage={currentPage}
-          totalPages={Math.ceil((totalResultsAvailable ? Math.min(totalResultsAvailable, maxResultsReturnable || 100) : totalCount) / (searchQuery.limit || 25))}
+          totalPages={Math.ceil((totalResultsAvailable ? Math.min(totalResultsAvailable, maxResultsReturnable || PAGINATION.MAX_API_RESULTS) : totalCount) / (searchQuery.limit || PAGINATION.DEFAULT_RESULTS_PER_PAGE))}
           totalResults={totalCount}
           totalResultsAvailable={totalResultsAvailable}
           maxResultsReturnable={maxResultsReturnable}
-          resultsPerPage={searchQuery.limit || 25}
+          resultsPerPage={searchQuery.limit || PAGINATION.DEFAULT_RESULTS_PER_PAGE}
           onPageChange={(page) => {
             const newQuery = { ...searchQuery, page };
             dispatch(setSearchQuery(newQuery));

@@ -6,8 +6,10 @@ import {
   ListToolsRequestSchema,
   McpError,
 } from '@modelcontextprotocol/sdk/types.js';
-import { Job } from '../models/Job';
+import { JobService } from './JobService.js';
+import { PAGINATION_CONSTANTS } from '../constants/pagination';
 import type { IJob, IJobSearchQuery } from '../types/index';
+import { Job } from '../models/Job';
 import { AIJobAnalyzer } from './AIJobAnalyzer';
 import { IsraeliJobScraper } from './IsraeliJobScraper';
 
@@ -162,7 +164,7 @@ export class JobPilotMCPServer {
                 limit: {
                   type: 'number',
                   description: 'Maximum number of jobs to return',
-                  default: 20,
+                  default: PAGINATION_CONSTANTS.DEFAULT_RESULTS_PER_PAGE,
                 },
               },
               required: ['query'],
@@ -362,7 +364,7 @@ export class JobPilotMCPServer {
   }
 
   private async handleIsraeliJobSearch(args: any) {
-    const { query, location, sites = ['all'], limit = 20 } = args;
+    const { query, location, sites = ['all'], limit = PAGINATION_CONSTANTS.DEFAULT_RESULTS_PER_PAGE } = args;
     
     try {
       console.log(`🔍 Searching Israeli job sites for: "${query}" in ${location || 'all Israel'}`);

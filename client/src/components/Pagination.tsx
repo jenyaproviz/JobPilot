@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { PAGINATION } from '../constants/pagination';
 
 interface PaginationProps {
   currentPage: number;
@@ -24,7 +25,7 @@ const Pagination: React.FC<PaginationProps> = ({
 }) => {
   // Generate page numbers to display
   const getPageNumbers = () => {
-    const delta = 2; // Number of pages to show on each side of current page
+    const delta = PAGINATION.PAGE_NAVIGATION_DELTA; // Number of pages to show on each side of current page
     const range = [];
     const rangeWithDots = [];
 
@@ -54,7 +55,7 @@ const Pagination: React.FC<PaginationProps> = ({
   
   // Calculate what to show as "total" - use API limit or actual total available
   const displayTotal = totalResultsAvailable 
-    ? Math.min(totalResultsAvailable, maxResultsReturnable || 100)
+    ? Math.min(totalResultsAvailable, maxResultsReturnable || PAGINATION.MAX_API_RESULTS)
     : totalResults;
 
   return (
@@ -67,9 +68,11 @@ const Pagination: React.FC<PaginationProps> = ({
           onChange={(e) => onResultsPerPageChange(Number(e.target.value))}
           className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
-          <option value={10}>10</option>
-          <option value={25}>25</option>
-          <option value={50}>50</option>
+          {PAGINATION.RESULTS_PER_PAGE_OPTIONS.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
         </select>
         <span className="text-sm text-gray-700">results per page</span>
       </div>
@@ -77,9 +80,9 @@ const Pagination: React.FC<PaginationProps> = ({
       {/* Results info */}
       <div className="text-sm text-gray-700">
         <div>Showing {startResult}-{endResult} of {displayTotal.toLocaleString()} results</div>
-        {totalResultsAvailable && totalResultsAvailable > (maxResultsReturnable || 100) && (
+        {totalResultsAvailable && totalResultsAvailable > (maxResultsReturnable || PAGINATION.MAX_API_RESULTS) && (
           <div className="text-xs text-gray-500 mt-1">
-            ({totalResultsAvailable.toLocaleString()} total found • showing first {maxResultsReturnable || 100} due to API limits)
+            ({totalResultsAvailable.toLocaleString()} total found • showing first {maxResultsReturnable || PAGINATION.MAX_API_RESULTS} due to API limits)
           </div>
         )}
       </div>

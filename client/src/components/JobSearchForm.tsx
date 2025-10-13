@@ -3,6 +3,7 @@ import { Search, MapPin, Filter, Briefcase, TrendingUp } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../hooks/redux';
 import { searchJobs, setSearchQuery } from '../store/jobsSlice';
 import { jobsApi } from '../services/api';
+import { PAGINATION } from '../constants/pagination';
 
 const JobSearchForm: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -51,8 +52,8 @@ const JobSearchForm: React.FC = () => {
 
     const query = {
       ...localQuery,
-      page: 1,
-      limit: 20
+      page: PAGINATION.DEFAULT_PAGE,
+      limit: PAGINATION.DEFAULT_RESULTS_PER_PAGE
     };
 
     dispatch(setSearchQuery(query));
@@ -189,7 +190,7 @@ const JobSearchForm: React.FC = () => {
                 type="button"
                 onClick={() => {
                   setLocalQuery(prev => ({ ...prev, keywords: keyword }));
-                  const query = { ...localQuery, keywords: keyword, page: 1, limit: 20 };
+                  const query = { ...localQuery, keywords: keyword, page: PAGINATION.DEFAULT_PAGE, limit: PAGINATION.DEFAULT_RESULTS_PER_PAGE };
                   dispatch(setSearchQuery(query));
                   dispatch(searchJobs(query));
                 }}

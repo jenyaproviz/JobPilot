@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { JobAggregatorService } from '../services/JobAggregatorService';
 import { Job } from '../models/Job';
+import { PAGINATION_CONSTANTS } from '../constants/pagination';
 
 const router = Router();
 const jobAggregator = new JobAggregatorService();
@@ -12,7 +13,7 @@ router.get('/search', async (req: Request, res: Response) => {
       q: keywords = '', 
       location = 'Israel', 
       sources = 'alljobs,drushim', 
-      limit = '20' 
+      limit = PAGINATION_CONSTANTS.DEFAULT_RESULTS_PER_PAGE.toString()
     } = req.query;
 
     if (!keywords || typeof keywords !== 'string') {
@@ -23,7 +24,7 @@ router.get('/search', async (req: Request, res: Response) => {
     }
 
     const sourceArray = typeof sources === 'string' ? sources.split(',') : ['alljobs'];
-    const limitNumber = parseInt(limit as string) || 20;
+    const limitNumber = parseInt(limit as string) || PAGINATION_CONSTANTS.DEFAULT_RESULTS_PER_PAGE;
 
     console.log(`🔍 API: Searching for "${keywords}" from sources: ${sourceArray.join(', ')}`);
 

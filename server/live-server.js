@@ -1,15 +1,18 @@
 const express = require("express");
 const cors = require("cors");
+const { PAGINATION_CONSTANTS } = require("./constants/pagination");
 
 // We'll simulate the LiveJobScraper functionality here since we can't import TypeScript directly
 class SimpleLiveJobScraper {
-  async searchAllSites(keywords, limit = 20) {
+  async searchAllSites(keywords, limit = PAGINATION_CONSTANTS.DEFAULT_RESULTS_PER_PAGE) {
     console.log(`🔍 Live job search for: "${keywords}"`);
     
-    // Simulate real job search results that would come from actual scraping
-    const liveJobs = [
+    // Generate enough jobs to support pagination (minimum 100 to simulate real job sites)
+    const minJobsToGenerate = Math.max(limit * 4, 100); // Ensure we have enough for multiple pages
+    
+    // Base job templates to vary from
+    const jobTemplates = [
       {
-        _id: `live_${Date.now()}_1`,
         title: `Senior ${keywords} Developer`,
         company: 'Remote Tech Solutions',
         location: 'Remote',
@@ -17,17 +20,11 @@ class SimpleLiveJobScraper {
         salary: '$95,000 - $135,000',
         employmentType: 'full-time',
         experienceLevel: 'senior',
-        postedDate: new Date().toISOString().split('T')[0],
-        originalUrl: 'https://remoteok.io/remote-jobs',
         source: 'RemoteOK',
         requirements: [keywords, 'JavaScript', 'Git', 'Remote Communication'],
-        keywords: [keywords, 'remote', 'senior', 'distributed'],
-        benefits: ['100% Remote', 'Flexible Hours', 'Health Insurance', 'Tech Stipend'],
-        isActive: true,
-        scrapedAt: new Date()
+        benefits: ['100% Remote', 'Flexible Hours', 'Health Insurance', 'Tech Stipend']
       },
       {
-        _id: `live_${Date.now()}_2`,
         title: `${keywords} Engineer`,
         company: 'GitHub',
         location: 'San Francisco, CA (Remote OK)',
@@ -35,17 +32,11 @@ class SimpleLiveJobScraper {
         salary: '$120,000 - $180,000',
         employmentType: 'full-time',
         experienceLevel: 'mid',
-        postedDate: new Date().toISOString().split('T')[0],
-        originalUrl: 'https://github.com/about/careers',
         source: 'GitHub',
         requirements: [keywords, 'Git', 'Collaboration', 'Open Source', 'API Development'],
-        keywords: [keywords, 'github', 'version control', 'collaboration'],
-        benefits: ['Stock Options', 'Remote Work', 'Learning Budget', 'Health Insurance'],
-        isActive: true,
-        scrapedAt: new Date()
+        benefits: ['Stock Options', 'Remote Work', 'Learning Budget', 'Health Insurance']
       },
       {
-        _id: `live_${Date.now()}_3`,
         title: `Full Stack ${keywords} Developer`,
         company: 'StartupXYZ',
         location: 'Austin, TX',
@@ -53,17 +44,11 @@ class SimpleLiveJobScraper {
         salary: '$80,000 - $120,000',
         employmentType: 'full-time',
         experienceLevel: 'mid',
-        postedDate: new Date().toISOString().split('T')[0],
-        originalUrl: 'https://angel.co/company/startupxyz/jobs',
         source: 'AngelList',
         requirements: [keywords, 'Full Stack', 'Database Design', 'API Development', 'Testing'],
-        keywords: [keywords, 'startup', 'full-stack', 'equity'],
-        benefits: ['Equity Package', 'Health Insurance', 'Flexible PTO', 'Learning Budget'],
-        isActive: true,
-        scrapedAt: new Date()
+        benefits: ['Equity Package', 'Health Insurance', 'Flexible PTO', 'Learning Budget']
       },
       {
-        _id: `live_${Date.now()}_4`,
         title: `${keywords} Specialist`,
         company: 'TechCorp International',
         location: 'New York, NY',
@@ -71,17 +56,11 @@ class SimpleLiveJobScraper {
         salary: '$105,000 - $150,000',
         employmentType: 'full-time',
         experienceLevel: 'senior',
-        postedDate: new Date().toISOString().split('T')[0],
-        originalUrl: 'https://stackoverflow.com/jobs',
         source: 'StackOverflow Network',
         requirements: [keywords, 'Scalability', 'Performance Optimization', 'Code Review', 'Mentoring'],
-        keywords: [keywords, 'enterprise', 'scalability', 'performance'],
-        benefits: ['Competitive Salary', 'Bonus Structure', 'Health Insurance', 'Retirement Plan'],
-        isActive: true,
-        scrapedAt: new Date()
+        benefits: ['Competitive Salary', 'Bonus Structure', 'Health Insurance', 'Retirement Plan']
       },
       {
-        _id: `live_${Date.now()}_5`,
         title: `Remote ${keywords} Consultant`,
         company: 'Global Solutions Inc',
         location: 'Remote (US/EU)',
@@ -89,16 +68,68 @@ class SimpleLiveJobScraper {
         salary: '$70,000 - $100,000',
         employmentType: 'contract',
         experienceLevel: 'mid',
-        postedDate: new Date().toISOString().split('T')[0],
-        originalUrl: 'https://weworkremotely.com',
         source: 'WeWorkRemotely',
         requirements: [keywords, 'Client Communication', 'Project Management', 'Problem Solving'],
-        keywords: [keywords, 'consulting', 'remote', 'flexible'],
-        benefits: ['Flexible Schedule', 'Remote Work', 'Project Variety', 'Hourly Rate'],
-        isActive: true,
-        scrapedAt: new Date()
+        benefits: ['Flexible Schedule', 'Remote Work', 'Project Variety', 'Hourly Rate']
       }
     ];
+
+    // Additional variations for companies, locations, and experience levels
+    const companies = [
+      'TechFlow Inc', 'InnovateCorp', 'DevSolutions', 'NextGen Software', 'CodeCraft LLC',
+      'BuildTech', 'SmartApps Inc', 'FutureLabs', 'AgileWorks', 'CloudFirst',
+      'DataDriven Co', 'ScaleTech', 'ByteForge', 'PixelPerfect', 'LogicLayer'
+    ];
+    
+    const locations = [
+      'Remote', 'San Francisco, CA', 'New York, NY', 'Austin, TX', 'Seattle, WA',
+      'London, UK', 'Berlin, Germany', 'Toronto, Canada', 'Tel Aviv, Israel', 'Amsterdam, NL',
+      'Boston, MA', 'Denver, CO', 'Chicago, IL', 'Los Angeles, CA', 'Miami, FL'
+    ];
+
+    const experienceLevels = ['entry', 'mid', 'senior'];
+    const employmentTypes = ['full-time', 'part-time', 'contract'];
+
+    // Generate jobs based on templates with variations
+    const liveJobs = [];
+    const baseTimestamp = Date.now();
+    
+    for (let i = 0; i < minJobsToGenerate; i++) {
+      const template = jobTemplates[i % jobTemplates.length];
+      const company = companies[i % companies.length];
+      const location = locations[i % locations.length];
+      const experienceLevel = experienceLevels[i % experienceLevels.length];
+      const employmentType = employmentTypes[i % employmentTypes.length];
+      
+      // Create variations of the job title
+      const titleVariations = [
+        template.title,
+        template.title.replace('Senior', experienceLevel === 'senior' ? 'Lead' : experienceLevel === 'mid' ? 'Mid-Level' : 'Junior'),
+        `${keywords} ${experienceLevel === 'senior' ? 'Architect' : 'Developer'}`,
+        `${experienceLevel === 'senior' ? 'Principal' : 'Software'} ${keywords} Engineer`
+      ];
+      
+      const job = {
+        _id: `live_${baseTimestamp}_${i}`,
+        title: titleVariations[i % titleVariations.length],
+        company: i < jobTemplates.length ? template.company : company,
+        location: i < jobTemplates.length ? template.location : location,
+        description: template.description,
+        salary: template.salary,
+        employmentType: i < jobTemplates.length ? template.employmentType : employmentType,
+        experienceLevel: i < jobTemplates.length ? template.experienceLevel : experienceLevel,
+        postedDate: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        originalUrl: `https://${template.source.toLowerCase().replace(/\s+/g, '')}.com/jobs`,
+        source: template.source,
+        requirements: template.requirements,
+        keywords: [keywords, template.source.toLowerCase(), experienceLevel],
+        benefits: template.benefits,
+        isActive: true,
+        scrapedAt: new Date()
+      };
+      
+      liveJobs.push(job);
+    }
 
     // Filter jobs based on keywords
     const filteredJobs = liveJobs.filter(job => 
@@ -132,7 +163,7 @@ app.get("/api/jobs", async (req, res) => {
       employmentType = "",
       experienceLevel = "",
       page = 1,
-      limit = 20 
+      limit = PAGINATION_CONSTANTS.DEFAULT_RESULTS_PER_PAGE 
     } = req.query;
 
     console.log(`🔍 Live job search request: keywords="${keywords}", location="${location}"`);
@@ -144,8 +175,12 @@ app.get("/api/jobs", async (req, res) => {
       });
     }
 
-    // Get live jobs from multiple sources
-    const liveJobs = await liveScraper.searchAllSites(keywords.toString(), parseInt(limit.toString()) || 20);
+    // Get live jobs from multiple sources - generate enough for all potential pages
+    const requestedLimit = parseInt(limit.toString()) || PAGINATION_CONSTANTS.DEFAULT_RESULTS_PER_PAGE;
+    const requestedPage = parseInt(page.toString()) || PAGINATION_CONSTANTS.DEFAULT_PAGE;
+    const minJobsNeeded = requestedPage * requestedLimit; // Ensure we have enough jobs for the requested page
+    
+    const liveJobs = await liveScraper.searchAllSites(keywords.toString(), Math.max(minJobsNeeded, PAGINATION_CONSTANTS.MAX_API_RESULTS));
     
     let filteredJobs = [...liveJobs];
 
@@ -172,8 +207,8 @@ app.get("/api/jobs", async (req, res) => {
       );
     }
 
-    const pageNum = parseInt(page.toString()) || 1;
-    const limitNum = parseInt(limit.toString()) || 20;
+    const pageNum = parseInt(page.toString()) || PAGINATION_CONSTANTS.DEFAULT_PAGE;
+    const limitNum = parseInt(limit.toString()) || PAGINATION_CONSTANTS.DEFAULT_RESULTS_PER_PAGE;
     const startIndex = (pageNum - 1) * limitNum;
     const paginatedJobs = filteredJobs.slice(startIndex, startIndex + limitNum);
 
@@ -213,7 +248,7 @@ app.get("/api/jobs", async (req, res) => {
 app.get("/api/jobs/stats/overview", async (req, res) => {
   try {
     // Get some sample live jobs for stats
-    const sampleJobs = await liveScraper.searchAllSites('developer', 50);
+    const sampleJobs = await liveScraper.searchAllSites(PAGINATION_CONSTANTS.DEFAULT_KEYWORDS, PAGINATION_CONSTANTS.MAX_API_RESULTS);
     
     const stats = {
       totalJobs: sampleJobs.length,

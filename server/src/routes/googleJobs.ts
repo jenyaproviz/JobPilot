@@ -1,6 +1,7 @@
 import express from 'express';
 import { Request, Response } from 'express';
 import { GoogleJobSearchService } from '../services/GoogleJobSearchService';
+import { PAGINATION_CONSTANTS } from '../constants/pagination';
 
 const router = express.Router();
 const googleJobSearch = new GoogleJobSearchService();
@@ -9,9 +10,9 @@ const googleJobSearch = new GoogleJobSearchService();
 router.get('/google-search', async (req: Request, res: Response) => {
   try {
     const { 
-      keywords = 'developer', 
-      location = '', 
-      limit = 20 
+      keywords = PAGINATION_CONSTANTS.DEFAULT_KEYWORDS, 
+      location = PAGINATION_CONSTANTS.DEFAULT_LOCATION, 
+      limit = PAGINATION_CONSTANTS.DEFAULT_RESULTS_PER_PAGE 
     } = req.query;
 
     console.log(`🔍 Google job search: "${keywords}" in ${location || 'any location'}`);
@@ -50,11 +51,11 @@ router.get('/google-search', async (req: Request, res: Response) => {
 router.get('/search', async (req: Request, res: Response) => {
   try {
     const { 
-      q: keywords = 'developer',
+      q: keywords = PAGINATION_CONSTANTS.DEFAULT_KEYWORDS,
       keywords: altKeywords,
-      location = '', 
-      limit = 200,
-      page = 1,
+      location = PAGINATION_CONSTANTS.DEFAULT_LOCATION, 
+      limit = PAGINATION_CONSTANTS.MAX_RESULTS_LIMIT,
+      page = PAGINATION_CONSTANTS.DEFAULT_PAGE,
       employmentType,
       experienceLevel,
       datePosted
@@ -68,7 +69,7 @@ router.get('/search', async (req: Request, res: Response) => {
 
     // Google Custom Search API limits us to 10 results per request, so we need to make multiple requests
     // For now, we'll get more results by making multiple calls with different start indices
-    const maxResults = Math.min(resultsLimit, 100); // Cap at 100 results total
+    const maxResults = Math.min(resultsLimit, PAGINATION_CONSTANTS.MAX_API_RESULTS); // Cap at API results total
     const searchResult = await googleJobSearch.searchJobs(
       searchKeywords, 
       location as string, 
@@ -146,10 +147,10 @@ router.get('/search', async (req: Request, res: Response) => {
 router.get('/', async (req: Request, res: Response) => {
   try {
     const { 
-      query = 'developer',
-      keywords = 'developer', 
-      location = '', 
-      limit = 20 
+      query = PAGINATION_CONSTANTS.DEFAULT_KEYWORDS,
+      keywords = PAGINATION_CONSTANTS.DEFAULT_KEYWORDS, 
+      location = PAGINATION_CONSTANTS.DEFAULT_LOCATION, 
+      limit = PAGINATION_CONSTANTS.DEFAULT_RESULTS_PER_PAGE 
     } = req.query;
 
     const searchKeywords = (query || keywords) as string;

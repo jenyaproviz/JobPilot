@@ -3,6 +3,7 @@ import { ScrapingConfig } from '../models/ScrapingConfig';
 import { JobScraper } from './JobScraper';
 import { defaultScrapingConfigs, israeliJobConfigs } from '../config/scrapingConfigs';
 import { IJob, IJobSearchQuery, IJobSearchResponse } from '../types/index';
+import { PAGINATION_CONSTANTS, FILTER_LIMITS } from '../constants/pagination';
 
 export class JobService {
   private scraper: JobScraper;
@@ -40,15 +41,26 @@ export class JobService {
         experienceLevel,
         datePosted,
         source,
-        page = 1,
-        limit = 20
+        page = PAGINATION_CONSTANTS.DEFAULT_PAGE,
+        limit = PAGINATION_CONSTANTS.DEFAULT_RESULTS_PER_PAGE
       } = query;
 
-      // Build MongoDB query
+      // Build MongoDB query with flexible search
       const mongoQuery: any = {
-        isActive: true,
-        $text: { $search: keywords }
+        isActive: true
       };
+
+      // Use more flexible keyword matching
+      if (keywords) {
+        const keywordRegex = keywords.split(' ').map(word => new RegExp(word, 'i'));
+        mongoQuery.$or = [
+          { title: { $in: keywordRegex } },
+          { description: { $in: keywordRegex } },
+          { company: { $in: keywordRegex } },
+          { requirements: { $in: keywordRegex } },
+          { keywords: { $in: keywordRegex } }
+        ];
+      }
 
       if (location) {
         mongoQuery.location = { $regex: location, $options: 'i' };
@@ -301,9 +313,9 @@ export class JobService {
       ]);
 
       return {
-        sources: sources.slice(0, 20),
-        locations: locations.slice(0, 50),
-        companies: companies.slice(0, 100),
+        sources: sources.slice(0, FILTER_LIMITS.MAX_SOURCES),
+        locations: locations.slice(0, FILTER_LIMITS.MAX_LOCATIONS),
+        companies: companies.slice(0, FILTER_LIMITS.MAX_COMPANIES),
         employmentTypes
       };
     } catch (error) {

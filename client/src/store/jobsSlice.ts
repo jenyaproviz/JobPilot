@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { Job, JobSearchQuery, JobSearchResponse } from '../types';
 import { jobsApi } from '../services/api';
+import { PAGINATION } from '../constants/pagination';
 
 export interface JobsState {
   jobs: Job[];
@@ -27,7 +28,7 @@ const initialState: JobsState = {
   totalCount: 0,
   totalResultsAvailable: undefined,
   maxResultsReturnable: undefined,
-  currentPage: 1,
+  currentPage: PAGINATION.DEFAULT_PAGE,
   totalPages: 0,
   filters: {
     sources: [],
@@ -37,8 +38,8 @@ const initialState: JobsState = {
   },
   searchQuery: {
     keywords: '',
-    page: 1,
-    limit: 20
+    page: PAGINATION.DEFAULT_PAGE,
+    limit: PAGINATION.DEFAULT_RESULTS_PER_PAGE
   },
   isLoading: false,
   error: null,
@@ -119,7 +120,7 @@ const jobsSlice = createSlice({
     clearJobs: (state) => {
       state.jobs = [];
       state.totalCount = 0;
-      state.currentPage = 1;
+      state.currentPage = PAGINATION.DEFAULT_PAGE;
       state.totalPages = 0;
     }
   },

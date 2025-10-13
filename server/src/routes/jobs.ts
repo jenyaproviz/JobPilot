@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import { IntelligentJobService } from "../services/IntelligentJobService";
 import { IJobSearchQuery, IIntelligentJobSearchResponse } from "../types/index";
+import { PAGINATION_CONSTANTS } from '../constants/pagination';
 
 const router = express.Router();
 const intelligentJobService = new IntelligentJobService();
@@ -22,8 +23,8 @@ router.get("/", async (req: Request, res: Response) => {
       experienceLevel: req.query.experienceLevel as string,
       datePosted: req.query.datePosted as 'today' | 'week' | 'month' | 'all',
       source: req.query.source as string,
-      page: req.query.page ? parseInt(req.query.page as string) : 1,
-      limit: req.query.limit ? parseInt(req.query.limit as string) : 20
+      page: req.query.page ? parseInt(req.query.page as string) : PAGINATION_CONSTANTS.DEFAULT_PAGE,
+      limit: req.query.limit ? parseInt(req.query.limit as string) : PAGINATION_CONSTANTS.DEFAULT_RESULTS_PER_PAGE
     };
 
     // Validate required fields
@@ -195,8 +196,8 @@ router.get("/intelligent", async (req: Request, res: Response) => {
       experienceLevel: req.query.experienceLevel as string,
       datePosted: req.query.datePosted as 'today' | 'week' | 'month' | 'all',
       source: req.query.source as string,
-      page: req.query.page ? parseInt(req.query.page as string) : 1,
-      limit: req.query.limit ? parseInt(req.query.limit as string) : 20
+      page: req.query.page ? parseInt(req.query.page as string) : PAGINATION_CONSTANTS.DEFAULT_PAGE,
+      limit: req.query.limit ? parseInt(req.query.limit as string) : PAGINATION_CONSTANTS.DEFAULT_RESULTS_PER_PAGE
     };
 
     const userSkills = req.query.skills ? (req.query.skills as string).split(',') : [];

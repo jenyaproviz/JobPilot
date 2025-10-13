@@ -1,5 +1,7 @@
 import { IsraeliJobScraper } from './IsraeliJobScraper';
+import axios from 'axios';
 import { IJob } from '../types/index';
+import { PAGINATION_CONSTANTS } from '../constants/pagination';
 
 export interface SearchJobsRequest {
   keywords: string;
@@ -16,7 +18,7 @@ export class JobAggregatorService {
   }
 
   async searchJobs(request: SearchJobsRequest): Promise<IJob[]> {
-    const { keywords, location = 'Israel', sources = ['alljobs', 'drushim', 'jobmaster'], limit = 20 } = request;
+    const { keywords, location = 'Israel', sources = ['alljobs', 'drushim', 'jobmaster'], limit = PAGINATION_CONSTANTS.DEFAULT_RESULTS_PER_PAGE } = request;
     const allJobs: IJob[] = [];
     const perSourceLimit = Math.ceil(limit / sources.length);
 

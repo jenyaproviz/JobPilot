@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { PAGINATION_CONSTANTS, GOOGLE_API_CONSTANTS } from '../constants/pagination';
 
 interface GoogleSearchResult {
   title: string;
@@ -53,7 +54,7 @@ export class GoogleJobSearchService {
     // Environment variables will be checked at runtime, not construction time
   }
 
-  async searchJobs(keywords: string, location: string = '', limit: number = 200): Promise<JobSearchResult> {
+  async searchJobs(keywords: string, location: string = PAGINATION_CONSTANTS.DEFAULT_LOCATION, limit: number = PAGINATION_CONSTANTS.MAX_RESULTS_LIMIT): Promise<JobSearchResult> {
     console.log(`🔍 Google search for jobs: "${keywords}" in ${location || 'Any location'}`);
     
     try {
@@ -68,8 +69,8 @@ export class GoogleJobSearchService {
       console.log(`🌍 Searching Google with query: "${searchQuery}"`);
       
       // Google API limits to 10 results per request, so we make multiple requests if needed
-      const maxPerRequest = 10;
-      const totalRequests = Math.ceil(Math.min(limit, 100) / maxPerRequest); // Cap at 100 total results
+      const maxPerRequest = GOOGLE_API_CONSTANTS.MAX_RESULTS_PER_REQUEST;
+      const totalRequests = Math.ceil(Math.min(limit, PAGINATION_CONSTANTS.MAX_API_RESULTS) / maxPerRequest); // Cap at API results total
       const allResults: GoogleSearchResult[] = [];
       let totalResultsAvailable = 0;
 
@@ -88,7 +89,7 @@ export class GoogleJobSearchService {
               num: numResults,
               start: startIndex
             },
-            timeout: 15000
+            timeout: GOOGLE_API_CONSTANTS.REQUEST_TIMEOUT
           });
 
           // Capture total results from first response
@@ -113,14 +114,14 @@ export class GoogleJobSearchService {
         return {
           jobs: this.parseGoogleResults(allResults, keywords, location),
           totalResultsAvailable: totalResultsAvailable,
-          maxResultsReturnable: 100 // Google API limitation
+          maxResultsReturnable: PAGINATION_CONSTANTS.MAX_API_RESULTS // Google API limitation
         };
       } else {
         console.log('❌ No job results found from Google Custom Search');
         return {
           jobs: [],
           totalResultsAvailable: totalResultsAvailable,
-          maxResultsReturnable: 100
+          maxResultsReturnable: PAGINATION_CONSTANTS.MAX_API_RESULTS
         };
       }
 

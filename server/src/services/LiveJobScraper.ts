@@ -1,6 +1,7 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { IJob } from '../types/index';
+import { PAGINATION_CONSTANTS } from '../constants/pagination';
 
 export class LiveJobScraper {
   private headers = {
@@ -312,7 +313,7 @@ export class LiveJobScraper {
     }
   }
 
-  async searchAllSites(keywords: string, limit: number = 20): Promise<IJob[]> {
+  async searchAllSites(keywords: string, limit: number = PAGINATION_CONSTANTS.DEFAULT_RESULTS_PER_PAGE): Promise<IJob[]> {
     console.log(`🔍 Starting live job search for: "${keywords}"`);
     console.log('🌐 Searching across multiple job sites...');
     

@@ -8,6 +8,7 @@ interface JobListProps {
   totalCount: number;
   currentPage: number;
   totalPages: number;
+  resultsPerPage: number; // Add resultsPerPage prop instead of hardcoded pageSize
   isLoading: boolean;
   error: string | null;
   onPageChange: (page: number) => void;
@@ -20,6 +21,7 @@ const JobList: React.FC<JobListProps> = ({
   totalCount,
   currentPage,
   totalPages,
+  resultsPerPage,
   isLoading,
   error,
   onPageChange,
@@ -85,10 +87,10 @@ const JobList: React.FC<JobListProps> = ({
           <h2 className="text-xl font-semibold text-gray-900">
             {totalCount.toLocaleString()} Jobs Found
           </h2>
-          <p className="text-gray-600">
+            <p className="text-gray-600">
             Showing page {currentPage} of {totalPages} 
-            ({((currentPage - 1) * 20) + 1}-{Math.min(currentPage * 20, totalCount)} jobs)
-          </p>
+            ({((currentPage - 1) * resultsPerPage) + 1}-{Math.min(currentPage * resultsPerPage, totalCount)} jobs)
+            </p>
         </div>
         
         {/* Pagination Controls */}
