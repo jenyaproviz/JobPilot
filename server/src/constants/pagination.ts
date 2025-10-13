@@ -20,4 +20,5 @@ export const GOOGLE_API_CONSTANTS = {
   MAX_RESULTS_PER_REQUEST: 10, // Google API limitation per request
   MAX_TOTAL_REQUESTS: 10, // Maximum number of requests to make
   REQUEST_TIMEOUT: 15000, // Timeout for each request in milliseconds
+  QUOTA_EXCEEDED_MESSAGE: 'Google API quota exceeded. Showing available results. Quota resets at midnight PST.',
 } as const;

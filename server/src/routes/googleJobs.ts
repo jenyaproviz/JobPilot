@@ -91,20 +91,51 @@ router.get('/search', async (req: Request, res: Response) => {
       );
     }
 
-    // Implement pagination for the available results (max 100)
-    const availableResults = filteredJobs.length;
+    // Calculate pagination based on API constraints
+    const availableResults = Math.min(searchResult.maxResultsReturnable, searchResult.totalResultsAvailable);
+    const totalPages = Math.ceil(availableResults / resultsLimit);
     
-    // Calculate total pages based on the maximum results we could potentially get
-    // Use the minimum of totalResultsAvailable and maxResultsReturnable for pagination calculations
-    const maxPaginationResults = Math.min(
-      searchResult.totalResultsAvailable, 
-      searchResult.maxResultsReturnable
-    );
-    const totalPages = Math.ceil(maxPaginationResults / resultsLimit);
+    // For page 1, use the results we already have
+    let paginatedJobs: any[] = filteredJobs;
     
+    // For page 2+, make additional API call with specific start index
     const startIndex = (currentPage - 1) * resultsLimit;
-    const endIndex = startIndex + resultsLimit;
-    const paginatedJobs = filteredJobs.slice(startIndex, endIndex);
+    
+    if (currentPage > 1 && startIndex < availableResults) {
+      console.log(`📡 Fetching page ${currentPage} results from Google API (start: ${startIndex + 1})`);
+      
+      try {
+        // Make API call for specific page (Google API uses 1-based indexing)
+        const pageResult = await googleJobSearch.searchJobs(
+          searchKeywords,
+          location as string,
+          resultsLimit,
+          startIndex + 1
+        );
+        
+        if (pageResult && pageResult.jobs.length > 0) {
+          paginatedJobs = pageResult.jobs;
+          
+          // Apply filters to page results
+          if (employmentType && employmentType !== 'any') {
+            paginatedJobs = paginatedJobs.filter(job => 
+              job.employmentType.toLowerCase().includes((employmentType as string).toLowerCase())
+            );
+          }
+
+          if (experienceLevel && experienceLevel !== 'any') {
+            paginatedJobs = paginatedJobs.filter(job => 
+              job.experienceLevel.toLowerCase() === (experienceLevel as string).toLowerCase()
+            );
+          }
+        } else {
+          paginatedJobs = []; // No results for this page
+        }
+      } catch (error) {
+        console.error('❌ Error fetching page results:', error);
+        paginatedJobs = [];
+      }
+    }
 
     res.json({
       success: true,

@@ -54,7 +54,7 @@ export class GoogleJobSearchService {
     // Environment variables will be checked at runtime, not construction time
   }
 
-  async searchJobs(keywords: string, location: string = PAGINATION_CONSTANTS.DEFAULT_LOCATION, limit: number = PAGINATION_CONSTANTS.MAX_RESULTS_LIMIT): Promise<JobSearchResult> {
+  async searchJobs(keywords: string, location: string = PAGINATION_CONSTANTS.DEFAULT_LOCATION, limit: number = PAGINATION_CONSTANTS.MAX_RESULTS_LIMIT, startIndex: number = 1): Promise<JobSearchResult> {
     console.log(`🔍 Google search for jobs: "${keywords}" in ${location || 'Any location'}`);
     
     try {
@@ -75,7 +75,7 @@ export class GoogleJobSearchService {
       let totalResultsAvailable = 0;
 
       for (let requestIndex = 0; requestIndex < totalRequests; requestIndex++) {
-        const startIndex = requestIndex * maxPerRequest + 1;
+        const currentStartIndex = startIndex + (requestIndex * maxPerRequest);
         const numResults = Math.min(maxPerRequest, limit - allResults.length);
         
         if (numResults <= 0) break;
@@ -87,7 +87,7 @@ export class GoogleJobSearchService {
               cx: this.searchEngineId,
               q: searchQuery,
               num: numResults,
-              start: startIndex
+              start: currentStartIndex
             },
             timeout: GOOGLE_API_CONSTANTS.REQUEST_TIMEOUT
           });
