@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "buildCommand": "npm ci --prefer-offline && npm run build",
+  "buildCommand": "npm install --no-optional && npm run build",
   "outputDirectory": "dist",
-  "installCommand": "npm ci --prefer-offline --no-audit --no-fund",
+  "installCommand": "npm install --no-optional --no-audit --no-fund",
   "framework": "vite",
   "functions": {},
   "routes": [
@@ -12,11 +12,15 @@
     }
   ],
   "env": {
-    "NODE_ENV": "production"
+    "NODE_ENV": "production",
+    "NPM_CONFIG_OPTIONAL": "false"
   },
   "build": {
     "env": {
-      "NODE_OPTIONS": "--max_old_space_size=4096"
+      "NODE_OPTIONS": "--max_old_space_size=4096",
+      "NPM_CONFIG_OPTIONAL": "false",
+      "DISABLE_OPENCOLLECTIVE": "true",
+      "ADBLOCK": "true"
     }
   }
 }

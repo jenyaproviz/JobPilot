@@ -1,5 +1,5 @@
 import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import react from '@vitejs/plugin-react-swc'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -8,10 +8,6 @@ export default defineConfig({
     // Only expose specific environment variables for security
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
     'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL)
-  },
-  esbuild: {
-    // Use esbuild for TypeScript compilation instead of tsc
-    target: 'esnext',
   },
   build: {
     outDir: 'dist',
@@ -22,10 +18,6 @@ export default defineConfig({
       output: {
         manualChunks: undefined,
       },
-      external: [],
-    },
-    commonjsOptions: {
-      include: [/node_modules/],
     },
   },
   server: {
