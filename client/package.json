@@ -29,7 +29,7 @@
     "@types/react-dom": "^19.1.9",
     "@types/react-router-dom": "^5.3.3",
     "@vitejs/plugin-react": "^5.0.4",
-    "@vitejs/plugin-react-swc": "^3.7.1",
+    "@vitejs/plugin-react-swc": "^3.11.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.36.0",
     "eslint-plugin-react-hooks": "^5.2.0",
@@ -42,10 +42,10 @@
     "vite": "^7.1.7"
   },
   "optionalDependencies": {
-    "@rollup/rollup-linux-x64-gnu": "^4.0.0",
-    "@rollup/rollup-win32-x64-msvc": "^4.0.0",
+    "@rollup/rollup-darwin-arm64": "^4.0.0",
     "@rollup/rollup-darwin-x64": "^4.0.0",
-    "@rollup/rollup-darwin-arm64": "^4.0.0"
+    "@rollup/rollup-linux-x64-gnu": "^4.0.0",
+    "@rollup/rollup-win32-x64-msvc": "^4.0.0"
   },
   "engines": {
     "node": ">=18.0.0",

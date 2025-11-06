@@ -6,8 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node dist/index.js",
-    "build": "tsc && ls -la dist/",
-    "build:render": "npm install --production=false && tsc && ls -la dist/",
+    "build": "tsc && dir dist",
+    "build:render": "npm install --production=false && tsc && dir dist",
     "dev": "ts-node-dev src/index.ts",
     "dev:memory": "NODE_OPTIONS='--max-old-space-size=1024' ts-node-dev src/index.ts",
     "render-postbuild": "npm run build",
@@ -47,6 +47,7 @@
     "@types/node": "^24.7.0",
     "@types/node-cron": "^3.0.11",
     "@types/nodemailer": "^7.0.2",
+    "@vitejs/plugin-react-swc": "^4.2.1",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.3"
   }

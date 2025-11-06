@@ -1,10 +1,8 @@
 import express from 'express';
 import { Request, Response } from 'express';
+import { JobSitesService } from '../services/JobSitesService';
 
 const router = express.Router();
-
-// Import JobSitesService - using require to import JS file
-const { JobSitesService } = require('../services/JobSitesService.js');
 const jobSitesService = new JobSitesService();
 
 // GET /api/job-sites - Get all job sites
