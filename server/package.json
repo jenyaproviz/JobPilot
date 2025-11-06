@@ -5,10 +5,11 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node dist/index.js",
+    "start": "NODE_OPTIONS='--max-old-space-size=512' node dist/index.js",
     "build": "npm install && tsc",
     "build:render": "npm install --production=false && tsc",
     "dev": "ts-node-dev src/index.ts",
+    "dev:memory": "NODE_OPTIONS='--max-old-space-size=1024' ts-node-dev src/index.ts",
     "render-postbuild": "npm run build",
     "real": "node real-israeli-server.js",
     "scrape": "node real-israeli-server.js",
