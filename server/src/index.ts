@@ -8,6 +8,7 @@ import contactRoutes from "./routes/contact";
 import jobSitesRoutes from "./routes/jobSites";
 import jobSearchRoutes from "./routes/jobSearch";
 import googleJobsRoutes from "./routes/googleJobs";
+import { JobPilotMCPServer } from "./services/MCPServer";
 
 // Load environment variables from server directory
 dotenv.config({ path: path.join(__dirname, '../.env') });
@@ -21,7 +22,9 @@ connectDB();
 app.use(cors({
   origin: [
     process.env.CLIENT_URL || "http://localhost:5173",
-    "http://localhost:5174"
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175"
   ],
   credentials: true
 }));
@@ -52,9 +55,46 @@ app.get("/api/health", (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+
+// Initialize MCP Server
+let mcpServer: JobPilotMCPServer | null = null;
+
+app.listen(PORT, async () => {
   console.log(`🚀 JobPilot Intelligent Server running on port ${PORT}`);
   console.log(`🤖 AI Features: Job matching, recommendations, trend analysis`);
   console.log(`🌐 Client URL: ${process.env.CLIENT_URL || "http://localhost:5173"}`);
-  console.log(`📡 MCP Server: Starting intelligent capabilities...`);
+  
+  // Start MCP Server
+  try {
+    mcpServer = new JobPilotMCPServer();
+    await mcpServer.start();
+    console.log(`📡 MCP Server: Successfully started intelligent capabilities`);
+  } catch (error) {
+    console.error(`❌ MCP Server: Failed to start`, error);
+  }
+});
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  console.log('\n🛑 Shutting down server gracefully...');
+  if (mcpServer) {
+    try {
+      await mcpServer.stop();
+    } catch (error) {
+      console.error('Error stopping MCP server:', error);
+    }
+  }
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  console.log('\n🛑 Shutting down server gracefully...');
+  if (mcpServer) {
+    try {
+      await mcpServer.stop();
+    } catch (error) {
+      console.error('Error stopping MCP server:', error);
+    }
+  }
+  process.exit(0);
 });

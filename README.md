@@ -536,6 +536,8 @@ MongoDB collections:
 - `users` - User profiles and preferences (future feature)
 
 ### Building and Deployment
+
+#### Local Development
 ```bash
 # Build entire project
 npm run build
@@ -549,6 +551,19 @@ cd client && npm run build
 # Start production server
 cd server && npm start
 ```
+
+#### Production Deployment
+JobPilot is configured for easy deployment on modern platforms:
+
+- **Client (Frontend)**: Deploy to [Vercel](https://vercel.com) using the `client` folder
+- **Server (Backend)**: Deploy to [Render](https://render.com) using the `server` folder  
+- **Database**: Use [MongoDB Atlas](https://www.mongodb.com/atlas) for cloud database
+
+📋 **Quick Deploy Links:**
+- [Deploy Client to Vercel](https://vercel.com/new/import?framework=vite&hasTrialAvailable=1&id=1073036949&installCommand=npm%20install%20--prefix%3D..&name=JobPilot&owner=jenyaproviz&path=client&project-name=job-pilot-client&provider=github&remainingProjects=2&s=https%3A%2F%2Fgithub.com%2Fjenyaproviz%2FJobPilot&teamSlug=jenyas-projects-65253479&totalProjects=2)
+- [Deploy Server to Render](https://render.com)
+
+📖 **Detailed Instructions:** See [DEPLOYMENT.md](./DEPLOYMENT.md) for complete step-by-step deployment guide.
 
 ## 📄 License
 

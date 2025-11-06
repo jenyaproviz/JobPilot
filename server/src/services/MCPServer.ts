@@ -6,7 +6,7 @@ import {
   ListToolsRequestSchema,
   McpError,
 } from '@modelcontextprotocol/sdk/types.js';
-import { JobService } from './JobService.js';
+import { JobService } from './JobService';
 import { PAGINATION_CONSTANTS } from '../constants/pagination';
 import type { IJob, IJobSearchQuery } from '../types/index';
 import { Job } from '../models/Job';

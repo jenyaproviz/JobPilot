@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: job-pilot-server
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        fromService:
+          type: web
+          name: job-pilot-server
+          property: port
+      - key: MONGODB_URI
+        sync: false # Set this in Render dashboard
+      - key: JWT_SECRET
+        sync: false # Set this in Render dashboard
+      - key: GOOGLE_API_KEY
+        sync: false # Set this in Render dashboard
+      - key: GOOGLE_SEARCH_ENGINE_ID
+        sync: false # Set this in Render dashboard
+      - key: EMAIL_USER
+        sync: false # Set this in Render dashboard
+      - key: EMAIL_PASS
+        sync: false # Set this in Render dashboard
+      - key: EMAIL_RECEIVER
+        sync: false # Set this in Render dashboard
+      - key: CLIENT_URL
+        value: https://your-vercel-app-name.vercel.app
