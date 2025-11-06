@@ -15,8 +15,14 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const app = express();
 
-// Connect to MongoDB
-connectDB();
+// Connect to MongoDB (optional)
+connectDB().then((connected) => {
+  if (connected) {
+    console.log('🎯 Server running with database connection');
+  } else {
+    console.log('🎯 Server running without database (limited functionality)');
+  }
+}).catch(console.error);
 
 // Middleware
 app.use(cors({

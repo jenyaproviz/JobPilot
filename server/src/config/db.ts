@@ -1,8 +1,15 @@
 import mongoose from 'mongoose';
 
-export const connectDB = async (): Promise<void> => {
+export const connectDB = async (): Promise<boolean> => {
   try {
-    const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/jobpilot';
+    const mongoURI = process.env.MONGODB_URI;
+    
+    // If no MongoDB URI is provided, skip database connection
+    if (!mongoURI) {
+      console.log('⚠️  No MONGODB_URI provided - running without database');
+      console.log('💡 To enable database features, set MONGODB_URI environment variable');
+      return false;
+    }
     
     await mongoose.connect(mongoURI);
     
@@ -19,13 +26,18 @@ export const connectDB = async (): Promise<void> => {
     });
     
     process.on('SIGINT', async () => {
-      await mongoose.connection.close();
-      console.log('🔌 MongoDB connection closed through app termination');
+      if (mongoose.connection.readyState !== 0) {
+        await mongoose.connection.close();
+        console.log('🔌 MongoDB connection closed through app termination');
+      }
       process.exit(0);
     });
     
+    return true;
+    
   } catch (error) {
     console.error('❌ Error connecting to MongoDB:', error);
-    process.exit(1);
+    console.log('⚠️  Server will continue without database connection');
+    return false;
   }
 };
