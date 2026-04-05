@@ -4,7 +4,7 @@ import { Briefcase, Github, Linkedin, Mail } from 'lucide-react';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { store } from './store';
-import { jobsApi } from './services/api';
+import { API_BASE_URL, jobsApi } from './services/api';
 import JobSitesView from './components/JobSitesView';
 import ContactForm from './components/ContactForm';
 import JobSearchForm from './components/JobSearchForm';
@@ -34,7 +34,7 @@ const AppContent: React.FC = () => {
 
   const loadJobSitesStats = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/job-sites/stats');
+      const response = await fetch(`${API_BASE_URL}/job-sites/stats`);
       const data = await response.json();
       if (data.success) {
         setTotalSites(data.data.totalSites);

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Mail, User, MessageSquare, Send } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { API_BASE_URL } from '../services/api';
 
 interface ContactFormProps {
   isOpen: boolean;
@@ -33,7 +34,7 @@ const ContactForm: React.FC<ContactFormProps> = ({ isOpen, onClose }) => {
     setIsSubmitting(true);
     
     try {
-      const response = await fetch('http://localhost:5000/api/contact', {
+      const response = await fetch(`${API_BASE_URL}/contact`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

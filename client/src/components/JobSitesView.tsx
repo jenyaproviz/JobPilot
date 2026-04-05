@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Heart, Star } from 'lucide-react';
 import JobSiteCard from './JobSiteCard';
+import { API_BASE_URL } from '../services/api';
 
 interface JobSite {
   id: string;
@@ -52,7 +53,7 @@ const JobSitesView: React.FC<JobSitesViewProps> = ({ searchQuery = '' }) => {
   const loadJobSites = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/job-sites');
+      const response = await fetch(`${API_BASE_URL}/job-sites`);
       const data = await response.json();
       
       if (data.success) {
