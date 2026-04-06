@@ -17,10 +17,10 @@ export class IsraeliJobScraper {
   async scrapeAllJobs(keywords: string, location: string = '', limit: number = 10): Promise<IJob[]> {
     try {
       console.log(`🇮🇱 Scraping AllJobs.co.il for: "${keywords}"`);
-      
-      // Updated AllJobs.co.il search URL structure - now uses homepage with query parameter
+
       const baseUrl = 'https://www.alljobs.co.il';
-      const searchUrl = `${baseUrl}/?q=${encodeURIComponent(keywords)}`;
+      const freeText = [keywords.trim(), location.trim()].filter(Boolean).join(' ');
+      const searchUrl = `${baseUrl}/SearchResultsGuest.aspx?page=1&position=&type=&freetxt=${encodeURIComponent(freeText)}&city=&region=`;
       
       console.log(`📡 Requesting URL: ${searchUrl}`);
       
@@ -35,30 +35,20 @@ export class IsraeliJobScraper {
       
       const $ = cheerio.load(response.data);
       const jobs: IJob[] = [];
-      
-      // Debug: Check what selectors are available
-      console.log(`🔍 Found elements: .JobListRow=${$('.JobListRow').length}, .JobListItem=${$('.JobListItem').length}, .job-row=${$('.job-row').length}, .job-item=${$('.job-item').length}`);
-      console.log(`🔍 Job-related IDs: #aj-popular-jobs=${$('#aj-popular-jobs').length}, [id*="job"]=${$('[id*="job" i]').length}`);
-      console.log(`🔍 Page title: ${$('title').text()}`);
-      console.log(`🔍 Total elements on page: divs=${$('div').length}, links=${$('a').length}`);
-      
-      // Updated selectors for AllJobs current structure
-      $('.JobListRow, .JobListItem, .job-row, .job-item').each((index, element) => {
+
+      $('.job-content-top-title a[href*="/Search/UploadSingle.aspx"]').each((index, element) => {
         if (index >= limit) return false;
-        
-        const $job = $(element);
-        const titleElement = $job.find('.JobTitle a, .job-title a, h2 a, h3 a').first();
-        const title = titleElement.text().trim() || $job.find('.JobTitle, .job-title, h2, h3').first().text().trim();
-        const company = $job.find('.CompanyName, .company-name, .company').first().text().trim();
-        const jobLocation = $job.find('.JobLocation, .job-location, .location').first().text().trim() || location || 'Israel';
-        const description = $job.find('.JobDescription, .job-description, .description').first().text().trim();
-        const jobLink = titleElement.attr('href') || $job.find('a').first().attr('href');
+
+        const titleElement = $(element);
+        const card = titleElement.closest('.job-content-top-title').parent().parent();
+        const title = titleElement.text().trim();
+        const company = card.find('.T14 a[href*="/Employer/"]').first().text().trim() || 'Company not specified';
+        const jobLocation = card.find('.job-content-top-desc, .job-content-top-desc-ltr').text().match(/(?:בתל אביב|בחיפה|בירושלים|בישראל|in\s+[A-Za-z\s,]+)/i)?.[0]?.replace(/^ב/, '').replace(/^in\s+/i, '').trim() || location || 'Israel';
+        const description = card.find('.job-content-top-desc, .job-content-top-desc-ltr').first().text().trim();
+        const jobLink = titleElement.attr('href');
         const fullUrl = jobLink ? (jobLink.startsWith('http') ? jobLink : `${baseUrl}${jobLink}`) : searchUrl;
-        
-        // Extract salary if available
-        const salaryText = $job.find('.salary, .Salary, .wage').first().text().trim();
-        const salary = salaryText ? salaryText : undefined;
-        
+        const salaryText = card.find('[class*="salary" i], [class*="wage" i]').first().text().trim();
+
         if (title && company) {
           jobs.push({
             _id: `alljobs_${Date.now()}_${index}`,
@@ -66,7 +56,7 @@ export class IsraeliJobScraper {
             company,
             location: jobLocation,
             description: description || `${title} position at ${company} in ${jobLocation}`,
-            salary,
+            salary: salaryText || undefined,
             employmentType: 'full-time' as const,
             experienceLevel: this.extractExperienceLevel(title, description),
             postedDate: new Date(),
@@ -82,8 +72,7 @@ export class IsraeliJobScraper {
       });
       
       if (jobs.length === 0) {
-        console.log('⚠️  AllJobs: No jobs found. This may be because AllJobs.co.il now uses JavaScript to dynamically load job listings.');
-        console.log('💡 Consider using Puppeteer for dynamic content or alternative job sites like Drushim.');
+        console.log('⚠️  AllJobs: No jobs found on SearchResultsGuest page for this query.');
       }
       
       console.log(`✅ AllJobs: Found ${jobs.length} jobs`);

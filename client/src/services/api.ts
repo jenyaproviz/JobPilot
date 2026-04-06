@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { JobSearchQuery, JobSearchResponse, ApiResponse, Job } from '../types';
+import type { JobSearchQuery, JobSearchResponse, ApiResponse, Job, PersonalizedSearchInput } from '../types';
 
 export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 export const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, '');
@@ -38,6 +38,27 @@ export const jobsApi = {
     console.log('🔍 Searching jobs with Google integration:', params.toString());
 
     return api.get(`/google-jobs/search?${params.toString()}`);
+  },
+
+  searchPersonalizedJobs: (input: PersonalizedSearchInput & { limit?: number; page?: number }): Promise<JobSearchResponse> => {
+    const formData = new FormData();
+
+    if (input.keywords) formData.append('keywords', input.keywords);
+    if (input.location) formData.append('location', input.location);
+    if (typeof input.yearsExperience === 'number') formData.append('yearsExperience', String(input.yearsExperience));
+    if (typeof input.radiusKm === 'number') formData.append('radiusKm', String(input.radiusKm));
+    if (input.technicalSkills?.length) formData.append('technicalSkills', JSON.stringify(input.technicalSkills));
+    if (input.languages?.length) formData.append('languages', JSON.stringify(input.languages));
+    if (input.preferredKeywords?.length) formData.append('preferredKeywords', JSON.stringify(input.preferredKeywords));
+    if (typeof input.limit === 'number') formData.append('limit', String(input.limit));
+    if (typeof input.page === 'number') formData.append('page', String(input.page));
+    if (input.resume) formData.append('resume', input.resume);
+
+    return api.post('/jobs/personalized-search', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
   },
 
   // Get trending job keywords

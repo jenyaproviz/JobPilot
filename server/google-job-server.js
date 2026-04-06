@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
-const { GoogleJobSearchService } = require("./src/services/GoogleJobSearchService.js");
-const { JobSitesService } = require("./src/services/JobSitesService.js");
+const { GoogleJobSearchService } = require("./dist/services/GoogleJobSearchService.js");
+const { JobSitesService } = require("./dist/services/JobSitesService.js");
 const { sendContactEmail } = require("./dist/controllers/contact.js");
 
 class GoogleJobPilotServer {

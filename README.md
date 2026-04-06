@@ -1,589 +1,190 @@
-# JobPilot - AI-Powered Job Search Engine
+# JobPilot
 
-JobPilot is a comprehensive job search platform that combines Google-powered search capabilities with live job scraping from multiple sources. It features a modern React frontend and a powerful Express.js backend with professional configuration management and intelligent search capabilities.
+JobPilot is a job search application with three local runtime processes:
 
-## 🚀 Features
+- a React frontend built with Vite
+- an Express API backend written in TypeScript
+- a separate MCP-based AI server running over stdio
 
-### Core Functionality
-- **Google-Powered Search**: Intelligent job search using Google Custom Search API with quota management
-- **Advanced Pagination**: Professional pagination system with 10/25/50 results per page options
-- **Live Job Scraping**: Real-time job data from multiple international job boards
-- **Flexible Search**: Smart keyword matching across title, description, company, and requirements
-- **AI Integration**: MCP (Model Context Protocol) server for intelligent job analysis
+The current user-facing flow is centered on Google-backed job search, job-site discovery, trending keywords, and search suggestions.
 
-### Job Sources
-- **RemoteOK**: Remote developer positions worldwide
-- **WeWorkRemotely**: Global remote job opportunities  
-- **GitHub Careers**: Tech industry positions from GitHub
-- **StackOverflow Network**: Developer-focused jobs
-- **Jobify360**: Israeli and international tech jobs
-- **DevJobs**: Specialized developer positions
-- **ZipRecruiter**: Comprehensive job listings
-- **Israeli Job Sites**: AllJobs.co.il, TechIt.co.il, Drushim.co.il, ElbitSystems, JobMaster, JobNet
+## Overview
 
-### Technical Features
-- **Modern UI**: React 19 + TypeScript frontend with Tailwind CSS
-- **Centralized Configuration**: Professional constants management system
-- **Real-Time Data**: Fresh job listings scraped directly from job sites
-- **Global Search**: Find jobs anywhere on the internet with API quota transparency
-- **Smart Filtering**: Advanced filtering by location, experience level, employment type
-- **Responsive Design**: Optimized for desktop and mobile devices
-- **Professional Architecture**: Type-safe configuration with single source of truth
+Local development uses these default endpoints:
 
-## 📋 Prerequisites
+- Frontend: `http://localhost:5173`
+- Backend API: `http://localhost:5001`
+- Health check: `http://localhost:5001/api/health`
 
-Before you begin, ensure you have the following installed:
-- **Node.js** (v18 or higher)
-- **npm** (v8 or higher)
-- **Git**
+Notes:
 
-## 🛠️ Installation & Setup
+- The backend uses port `5001` because `5000` is commonly occupied by Docker or WSL on Windows.
+- The AI MCP server is not an HTTP server. It runs as a separate terminal process and communicates over stdio.
+- If Vite moves the frontend to another localhost port, the backend now accepts localhost dev origins dynamically.
 
-### 1. Clone the Repository
-```bash
-git clone <repository-url>
-cd JobPilot
-```
+## Requirements
 
-### 2. Install Dependencies
+- Node.js 18 or newer
+- npm 8 or newer
+- MongoDB for full local database-backed behavior
 
-#### Install Server Dependencies
-```bash
-cd server
-npm install
-```
+Optional:
 
-#### Install Client Dependencies  
-```bash
-cd ../client
-npm install
-```
+- Google Custom Search credentials for Google job search routes
 
-### 3. Environment Configuration (Optional)
+## Install
 
-For enhanced functionality, you can configure Google Custom Search API:
+From the project root:
 
-1. Create a `.env` file in the `server` directory:
-```bash
-cd ../server
-touch .env
-```
-
-2. Add your Google API credentials to `.env`:
-```
-GOOGLE_API_KEY=your_google_api_key_here
-GOOGLE_SEARCH_ENGINE_ID=your_search_engine_id_here
-```
-
-> **Note**: The system works without Google API keys using fallback job scraping. Google API configuration is optional but recommended for enhanced search capabilities.
-
-## 🚀 Starting the Project
-
-### Method 1: Quick Start Scripts (Easiest)
-
-#### Windows Batch File
-Double-click `start.bat` or run:
-```bash
-./start.bat
-```
-
-#### PowerShell Script
 ```powershell
-./start.ps1
-```
-
-#### NPM Script
-```bash
-npm run install:all  # Install all dependencies
-npm run start        # Start both server and client
-```
-
-### Method 2: Manual Start (Recommended for Development)
-
-#### 1. Start the Backend Server
-Open a terminal and navigate to the server directory:
-```bash
 cd server
-node google-job-server.js
+npm install
+
+cd ..\client
+npm install
 ```
 
-You should see:
-```
-🌍 Google JobPilot Server running on port 3001
-📡 API Endpoints:
-   - GET http://localhost:3001/api/jobs/search?q=keywords&location=location
-   - GET http://localhost:3001/api/jobs/suggestions?q=partial_keywords
-   - GET http://localhost:3001/api/jobs/popular
-   - GET http://localhost:3001/api/jobs/stats
-   - GET http://localhost:3001/health
-🔍 Powered by Google Custom Search API
-🌐 Global Job Search - Any job, anywhere on the internet!
+## Run Locally
+
+### Windows quick start
+
+| Option | Command | What it does |
+| --- | --- | --- |
+| PowerShell | `./start.ps1` | Starts backend API, AI MCP server, and frontend |
+| Batch | `start.bat` | Starts backend API, AI MCP server, and frontend |
+
+### Manual start
+
+Open three terminals from the project root.
+
+| Terminal | Directory | Command | Expected result |
+| --- | --- | --- | --- |
+| 1 | `server` | `npm run dev` | Backend API starts on port `5001` |
+| 2 | `server` | `npm run mcp` | MCP AI server starts and stays running on stdio |
+| 3 | `client` | `npm run start` | Vite starts and prints the active frontend URL |
+
+If `5173` is already in use, Vite will automatically choose the next free port.
+
+For a focused startup guide, see [MANUAL_START.md](MANUAL_START.md).
+
+## Verify The App
+
+Check the backend health endpoint:
+
+```powershell
+Invoke-RestMethod http://localhost:5001/api/health
 ```
 
-#### 2. Start the Frontend Client
-Open a **new terminal** and navigate to the client directory:
-```bash
+Then open the frontend URL printed by Vite.
+
+When everything is working:
+
+- the backend terminal stays running on port `5001`
+- the MCP terminal stays running and reports that it is ready on stdio
+- the frontend terminal prints the active localhost port
+
+## Active API Usage
+
+The frontend currently relies on these backend routes:
+
+- `GET /api/google-jobs/search`
+- `GET /api/job-search/trending`
+- `GET /api/job-search/categories`
+- `GET /api/job-search/suggest`
+- `GET /api/job-sites`
+- `GET /api/job-sites/stats`
+- `POST /api/contact`
+- `GET /api/health`
+
+There are additional AI-oriented and scraping routes in the codebase, but the main UI currently uses the Google-search-based flow and metadata endpoints above.
+
+## Environment Notes
+
+Local development expects:
+
+- backend config in `server/.env`
+- frontend config in `client/.env`
+
+Important local values:
+
+- `PORT=5001`
+- `VITE_API_URL=http://localhost:5001/api`
+
+## Troubleshooting
+
+### Server Offline banner in the browser
+
+Check these in order:
+
+1. Confirm the backend is running at `http://localhost:5001/api/health`.
+2. Confirm the frontend is using the exact localhost port printed by Vite.
+3. Hard refresh the browser tab if it may still be using an older frontend bundle.
+4. Confirm `client/.env` points to `http://localhost:5001/api`.
+
+### Frontend opened on a different port
+
+This is normal when `5173` is already occupied. Use the exact localhost URL printed by Vite.
+
+### AI server questions
+
+The AI server is the third terminal. It is not an HTTP service.
+
+Run it with:
+
+```powershell
+cd server
+npm run mcp
+```
+
+It should remain open and print that the MCP server is ready on stdio.
+
+### Backend fails to start
+
+Check whether another process is already using the backend port:
+
+```powershell
+netstat -ano | findstr :5001
+```
+
+If needed, stop the conflicting process or change the backend port in `server/.env` and the matching frontend API URL in `client/.env`.
+
+### Client `npm run start` fails
+
+Run:
+
+```powershell
 cd client
-npm run dev
-```
-
-You should see:
-```
-  ➜  Local:   http://localhost:5173/
-  ➜  Network: use --host to expose
-  ➜  press h + enter to show help
-```
-
-### Method 3: Using PowerShell (Windows)
-
-#### Start Backend:
-```powershell
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd 'C:\path\to\JobPilot\server'; node google-job-server.js"
-```
-
-#### Start Frontend:
-```powershell
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd 'C:\path\to\JobPilot\client'; npm run dev"
-```
-
-## 🌐 Accessing the Application
-
-1. **Frontend**: Open your browser and go to `http://localhost:5173`
-2. **Backend API**: Available at `http://localhost:3001`
-3. **Health Check**: `http://localhost:3001/api/health`
-
-## 🔍 Using JobPilot
-
-### Search for Jobs
-1. Open `http://localhost:5173` in your browser
-2. Enter job keywords in the search box (e.g., "React Developer", "JavaScript", "Python Engineer")
-3. Optionally specify a location (e.g., "Remote", "New York", "Tel Aviv")
-4. Click "Search Jobs"
-
-### Example Searches
-- `React Developer` - Find React development positions
-- `Python Remote` - Python jobs with remote options
-- `JavaScript Tel Aviv` - JavaScript jobs in Tel Aviv area
-- `TypeScript Senior` - Senior TypeScript positions
-
-## 📡 API Endpoints
-
-The backend server provides comprehensive REST API endpoints:
-
-### Core Job Search
-```bash
-GET /api/jobs?keywords=developer&location=remote&limit=25&page=1
-# Advanced search with pagination and filtering
-
-GET /api/jobs/search?q=keywords&location=location&limit=10
-# Alternative search endpoint
-
-GET /api/jobs/google-search?keywords=react&location=newyork&limit=50
-# Google-powered search with quota management
-```
-
-### Job Management
-```bash
-POST /api/jobs/scrape
-# Trigger live job scraping from multiple sites
-
-POST /api/jobs/scrape/intelligent  
-# AI-enhanced scraping with intelligent job analysis
-
-GET /api/jobs/:id
-# Get specific job details by ID
-```
-
-### Statistics & Analytics
-```bash
-GET /api/jobs/stats/overview
-# Comprehensive job market statistics
-
-GET /api/jobs/suggestions?q=partial_keywords
-# Smart job search suggestions
-
-GET /api/jobs/trending
-# Trending job keywords and skills
-```
-
-### System Health
-```bash
-GET /api/health
-# Server health check and status
-
-GET /api/jobs/test/scrape-config
-# Test endpoint for scraping configuration validation
-```
-
-### Filter Options
-```bash
-GET /api/jobs/filters?keywords=developer&location=telaviv
-# Get available filter options for search results
-```
-
-## 🆕 Recent Improvements (v2.0)
-
-### Pagination System Overhaul
-- ✅ **Centralized Constants**: Eliminated 28+ hardcoded pagination values across 14+ files
-- ✅ **Professional Configuration**: Type-safe constants with single source of truth
-- ✅ **Flexible Page Sizes**: Dynamic 10/25/50 results per page options
-- ✅ **Smart Navigation**: Intelligent pagination with proper total pages calculation
-- ✅ **API Transparency**: Clear display of Google API limitations vs. total results
-
-### Search Engine Enhancement
-- ✅ **Flexible Matching**: Upgraded from strict text search to intelligent regex-based matching
-- ✅ **Multi-Field Search**: Searches across title, description, company, requirements, keywords
-- ✅ **Better Results**: More relevant job matches with reduced empty result pages
-- ✅ **Graceful Fallbacks**: Intelligent handling of restrictive search queries
-
-### Job Source Expansion
-- ✅ **Three New Job Sites**: Added Jobify360, DevJobs, and ZipRecruiter integration
-- ✅ **Israeli Market Coverage**: Comprehensive Israeli job sites scraping
-- ✅ **Featured Job Sites**: Updated main page cards with new job sources
-- ✅ **Real-Time Scraping**: Live job data from 15+ sources worldwide
-
-### Technical Architecture
-- ✅ **Configuration Management**: Professional centralized constants system
-- ✅ **Code Quality**: Eliminated hardcoded values for maintainable codebase
-- ✅ **Type Safety**: Full TypeScript support with proper type definitions
-- ✅ **Error Handling**: Robust error handling for API quota limits and scraping failures
-
-## 🔧 Troubleshooting
-
-### Server Connection Issues
-If you see "Server Offline" in the frontend:
-
-1. **Check if server is running**:
-   ```bash
-   netstat -ano | findstr :3001
-   ```
-
-2. **Restart the server**:
-   ```bash
-   cd server
-   node google-job-server.js
-   ```
-
-3. **Check server logs** for any error messages
-
-### Frontend Issues
-If the frontend isn't loading:
-
-1. **Ensure client is running**:
-   ```bash
-   netstat -ano | findstr :5173
-   ```
-
-2. **Restart the client**:
-   ```bash
-   cd client
-   npm run dev
-   ```
-
-### Common Issues
-
-#### Pagination Shows 0 Results on Page 2+
-If page 2+ shows no results despite having a total count:
-
-1. **Check Search Specificity**: Very specific searches (e.g., "strategic buyer Tel Aviv") may have limited results
-2. **Try Broader Keywords**: Use general terms like "developer" or "engineer"
-3. **Run Job Scraping**: Populate database with fresh jobs:
-   ```bash
-   curl -X POST "http://localhost:5000/api/jobs/scrape" \
-   -H "Content-Type: application/json" \
-   -d '{"keywords": "developer", "location": ""}'
-   ```
-4. **Check Database**: Verify jobs exist in MongoDB for your search criteria
-
-#### Google API Quota Exceeded
-If you see "quota exceeded" messages:
-
-1. **Daily Limit**: Google Custom Search API has 100 queries/day limit
-2. **Wait for Reset**: Quota resets at midnight PST
-3. **Fallback Mode**: System automatically uses live scraping when quota exceeded
-4. **Monitor Usage**: Check Google Cloud Console for quota usage
-
-#### Port Already in Use
-If you get "port already in use" errors:
-
-**For Backend (port 5000):**
-```bash
-# Kill process on port 5000
-npx kill-port 5000
-# Or manually find and kill the process
-netstat -ano | findstr :5000
-taskkill /F /PID <process-id>
-```
-
-**For Frontend (port 5173):**
-```bash
-# Kill process on port 5173
-npx kill-port 5173
-```
-
-#### Dependencies Issues
-If you encounter dependency errors:
-```bash
-# Clear npm cache and reinstall
-npm cache clean --force
-rm -rf node_modules package-lock.json
 npm install
+npm run start
 ```
 
-#### TypeScript Build Errors
-If you encounter TypeScript compilation errors:
-```bash
-# Rebuild server
+### Build check
+
+To verify the backend compiles:
+
+```powershell
 cd server
 npm run build
-
-# Rebuild client
-cd ../client  
-npm run build
 ```
 
-## 🏗️ Project Structure
+## Project Layout
 
-```
+```text
 JobPilot/
-├── client/                           # React frontend
-│   ├── src/
-│   │   ├── components/               # React components
-│   │   │   ├── JobCard.tsx          # Individual job display
-│   │   │   ├── JobList.tsx          # Job listings with pagination
-│   │   │   ├── JobSearchForm.tsx    # Search form with trending keywords
-│   │   │   ├── JobSearchResults.tsx # Search results with pagination
-│   │   │   ├── Pagination.tsx       # Professional pagination component
-│   │   │   └── JobSitesView.tsx     # Featured job sites cards
-│   │   ├── constants/
-│   │   │   └── pagination.ts        # Frontend pagination constants
-│   │   ├── services/                # API services
-│   │   ├── store/                   # Redux store with jobsSlice
-│   │   ├── types/                   # TypeScript types
-│   │   └── App.tsx                  # Main app component
-│   ├── package.json
-│   └── vite.config.ts
-├── server/                          # Express backend
-│   ├── src/
-│   │   ├── constants/
-│   │   │   └── pagination.ts        # Centralized backend constants
-│   │   ├── services/                # Backend services
-│   │   │   ├── GoogleJobSearchService.ts  # Google API integration
-│   │   │   ├── IntelligentJobService.ts   # AI-powered job service
-│   │   │   ├── JobService.ts        # Core job search logic
-│   │   │   ├── LiveJobScraper.ts    # Live job scraping
-│   │   │   ├── IsraeliJobScraper.ts # Israeli job sites scraping
-│   │   │   └── MCPServer.ts         # AI capabilities server
-│   │   ├── routes/                  # API routes
-│   │   │   ├── jobs.ts              # Main job search endpoints
-│   │   │   ├── googleJobs.ts        # Google-specific search
-│   │   │   └── jobSearch.ts         # Alternative search endpoints
-│   │   ├── models/                  # MongoDB models
-│   │   └── config/                  # Database and scraping configs
-│   ├── constants/
-│   │   └── pagination.js            # CommonJS constants for JS files
-│   ├── google-job-server.js         # Google-powered server
-│   ├── live-server.js               # Live scraping server
-│   ├── real-israeli-server.js       # Israeli job sites server
-│   └── package.json
-├── start.bat                        # Windows batch start script
-├── start.ps1                        # PowerShell start script  
-├── package.json                     # Root package.json with scripts
-└── README.md                        # This file
+├── client/                React frontend
+├── server/                Express API and MCP server
+├── MANUAL_START.md        Focused local startup guide
+├── start.ps1              Windows PowerShell launcher
+├── start.bat              Windows batch launcher
+└── README.md
 ```
 
-## 🎯 Professional Pagination System
+Key entrypoints:
 
-JobPilot features a comprehensive pagination system with centralized configuration:
+- `server/src/index.ts` for the HTTP API
+- `server/src/mcp.ts` for the standalone MCP server
+- `client/src/App.tsx` for the frontend app shell
 
-### Features
-- **Flexible Page Sizes**: Choose from 10, 25, or 50 results per page
-- **Smart Navigation**: Intelligent page navigation with total results display
-- **API Quota Management**: Transparent Google API limitations (100 results max) vs. total available results
-- **Centralized Constants**: Single source of truth for all pagination settings
-- **Type-Safe Configuration**: TypeScript constants ensure consistency across frontend and backend
+## Current Recommendation
 
-### Configuration
-All pagination settings are managed through centralized constants:
-
-**Frontend** (`client/src/constants/pagination.ts`):
-```typescript
-export const PAGINATION = {
-  DEFAULT_RESULTS_PER_PAGE: 10,
-  RESULTS_PER_PAGE_OPTIONS: [10, 25, 50],
-  MAX_API_RESULTS: 100,
-  PAGE_NAVIGATION_DELTA: 2
-} as const;
-```
-
-**Backend** (`server/src/constants/pagination.ts`):
-```typescript
-export const PAGINATION_CONSTANTS = {
-  DEFAULT_PAGE: 1,
-  DEFAULT_RESULTS_PER_PAGE: 10,
-  MAX_API_RESULTS: 100,
-  MAX_RESULTS_LIMIT: 200
-} as const;
-```
-
-## 🔧 Enhanced Search Capabilities
-
-### Intelligent Search Algorithm
-- **Flexible Matching**: Searches across job title, description, company, requirements, and keywords
-- **Regex-Based**: Uses intelligent regex patterns for better match quality
-- **Fallback Logic**: Graceful degradation when strict searches return no results
-- **Multi-Field Search**: Searches multiple job attributes simultaneously
-
-### Google API Integration
-- **Quota Management**: Handles daily API limits (100 queries/day) gracefully
-- **Multiple Requests**: Makes up to 10 API calls for comprehensive results
-- **Real Results Display**: Shows actual total results (e.g., 81,900+) vs. API limitations
-- **Transparent Limitations**: Clear user communication about API constraints
-
-## 🔮 Job Sources
-
-JobPilot aggregates jobs from multiple sources worldwide:
-
-### International Sources
-1. **RemoteOK**: Remote developer positions globally
-2. **WeWorkRemotely**: Remote job opportunities worldwide
-3. **GitHub Careers**: Tech industry positions from GitHub
-4. **StackOverflow Network**: Developer-focused jobs
-5. **Jobify360**: International tech job opportunities
-6. **DevJobs**: Specialized developer positions
-7. **ZipRecruiter**: Comprehensive job listings
-
-### Israeli Job Market
-8. **AllJobs.co.il**: Israel's leading job portal
-9. **TechIt.co.il**: Israeli tech job specialization
-10. **Drushim.co.il**: Professional job listings
-11. **ElbitSystems**: Defense industry careers
-12. **JobMaster.co.il**: General job marketplace
-13. **JobNet.co.il**: Professional networking jobs
-
-### Fallback Sources
-14. **Google Search**: Web-wide job search capability
-15. **Live Scraping**: Real-time job data extraction
-
-## 🚀 Development
-
-### Configuration Management
-All pagination and search settings are centralized:
-
-**Frontend Constants** (`client/src/constants/pagination.ts`):
-```typescript
-export const PAGINATION = {
-  DEFAULT_RESULTS_PER_PAGE: 10,
-  RESULTS_PER_PAGE_OPTIONS: [10, 25, 50] as const,
-  MAX_API_RESULTS: 100,
-  PAGE_NAVIGATION_DELTA: 2
-} as const;
-```
-
-**Backend Constants** (`server/src/constants/pagination.ts`):
-```typescript
-export const PAGINATION_CONSTANTS = {
-  DEFAULT_PAGE: 1,
-  DEFAULT_RESULTS_PER_PAGE: 10,
-  MAX_API_RESULTS: 100,
-  DEFAULT_KEYWORDS: 'developer',
-  MAX_RESULTS_LIMIT: 200
-} as const;
-
-export const FILTER_LIMITS = {
-  MAX_SOURCES: 20,
-  MAX_LOCATIONS: 50,
-  MAX_COMPANIES: 100
-} as const;
-```
-
-### Adding New Job Sources
-To add new job scraping sources:
-
-1. **Live Job Scraper**: Edit `server/src/services/LiveJobScraper.ts`
-2. **Israeli Jobs**: Edit `server/src/services/IsraeliJobScraper.ts`  
-3. **Configuration**: Update `server/src/config/scrapingConfigs.ts`
-
-### Modifying Pagination
-To change pagination behavior:
-
-1. **Update Constants**: Modify the centralized constants files
-2. **Frontend**: Components automatically use `PAGINATION` constants
-3. **Backend**: Services automatically use `PAGINATION_CONSTANTS`
-4. **No Hardcoded Values**: Never use hardcoded pagination numbers
-
-### Key Frontend Files
-The React frontend is in the `client/` directory:
-- `src/App.tsx` - Main application
-- `src/components/JobCard.tsx` - Individual job display  
-- `src/components/Pagination.tsx` - Professional pagination component
-- `src/components/JobSearchResults.tsx` - Search results with pagination
-- `src/store/jobsSlice.ts` - Redux state management
-- `src/services/api.ts` - API communication
-
-### Key Backend Files
-The Express backend is in the `server/` directory:
-- `src/services/IntelligentJobService.ts` - AI-powered job service
-- `src/services/JobService.ts` - Core job search logic
-- `src/services/GoogleJobSearchService.ts` - Google API integration
-- `src/routes/jobs.ts` - Main job search endpoints
-- `src/constants/pagination.ts` - Centralized configuration
-
-### Database Schema
-MongoDB collections:
-- `jobs` - Job listings with full-text search indexes
-- `scrapingconfigs` - Site-specific scraping configurations
-- `users` - User profiles and preferences (future feature)
-
-### Building and Deployment
-
-#### Local Development
-```bash
-# Build entire project
-npm run build
-
-# Build server only  
-cd server && npm run build
-
-# Build client only
-cd client && npm run build
-
-# Start production server
-cd server && npm start
-```
-
-#### Production Deployment
-JobPilot is configured for easy deployment on modern platforms:
-
-- **Client (Frontend)**: Deploy to [Vercel](https://vercel.com) using the `client` folder
-- **Server (Backend)**: Deploy to [Render](https://render.com) using the `server` folder  
-- **Database**: Use [MongoDB Atlas](https://www.mongodb.com/atlas) for cloud database
-
-📋 **Quick Deploy Links:**
-- [Deploy Client to Vercel](https://vercel.com/new/import?framework=vite&hasTrialAvailable=1&id=1073036949&installCommand=npm%20install%20--prefix%3D..&name=JobPilot&owner=jenyaproviz&path=client&project-name=job-pilot-client&provider=github&remainingProjects=2&s=https%3A%2F%2Fgithub.com%2Fjenyaproviz%2FJobPilot&teamSlug=jenyas-projects-65253479&totalProjects=2)
-- [Deploy Server to Render](https://render.com)
-
-📖 **Detailed Instructions:** See [DEPLOYMENT.md](./DEPLOYMENT.md) for complete step-by-step deployment guide.
-
-## 📄 License
-
-MIT License - see LICENSE file for details
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
-## 📞 Support
-
-If you encounter issues:
-1. Check the troubleshooting section above
-2. Ensure both server and client are running
-3. Check browser console for error messages
-4. Verify API endpoints are accessible
-
----
-
-**Happy Job Hunting! 🎯**
+Use the three-terminal local workflow described above. If a single-command cross-platform starter is needed later, it should be added explicitly rather than relying on the legacy root workspace scripts.

@@ -1,5 +1,8 @@
 import axios from 'axios';
+import * as cheerio from 'cheerio';
 import { PAGINATION_CONSTANTS, GOOGLE_API_CONSTANTS } from '../constants/pagination';
+import { JobSitesService } from './JobSitesService';
+import { JobAggregatorService } from './JobAggregatorService';
 
 interface GoogleSearchResult {
   title: string;
@@ -42,6 +45,9 @@ interface JobSearchResult {
 }
 
 export class GoogleJobSearchService {
+  private readonly jobSitesService = new JobSitesService();
+  private readonly jobAggregatorService = new JobAggregatorService();
+
   private get apiKey(): string {
     return process.env.GOOGLE_API_KEY || '';
   }
@@ -54,6 +60,335 @@ export class GoogleJobSearchService {
     // Environment variables will be checked at runtime, not construction time
   }
 
+  private buildQueryTokens(...parts: string[]): string[] {
+    return parts
+      .join(' ')
+      .toLowerCase()
+      .split(/[^\p{L}\p{N}#+.-]+/u)
+      .map((token) => token.trim())
+      .filter((token) => token.length > 1);
+  }
+
+  private buildGoogleHtmlFallbackQuery(keywords: string, location: string): string {
+    const query = [keywords.trim(), location.trim()].filter(Boolean).join(' ').trim();
+    if (!query) {
+      return 'jobs';
+    }
+
+    return /\b(job|jobs|career|careers|vacancy|position)\b/i.test(query)
+      ? query
+      : `${query} jobs`;
+  }
+
+  private buildGoogleHtmlHeaders() {
+    return {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+    };
+  }
+
+  private async searchGoogleHtmlFallback(
+    keywords: string,
+    location: string,
+    limit: number,
+    startIndex: number
+  ): Promise<JobSearchResult | null> {
+    try {
+      const response = await axios.get<string>('https://www.google.com/search', {
+        params: {
+          hl: 'en',
+          q: this.buildGoogleHtmlFallbackQuery(keywords, location),
+          start: Math.max(startIndex - 1, 0)
+        },
+        headers: this.buildGoogleHtmlHeaders(),
+        timeout: GOOGLE_API_CONSTANTS.REQUEST_TIMEOUT
+      });
+
+      const $ = cheerio.load(response.data);
+      const seen = new Set<string>();
+      const jobs: JobResult[] = [];
+
+      $('a[href^="/url?q="]').each((index, element) => {
+        if (jobs.length >= limit) {
+          return false;
+        }
+
+        const href = $(element).attr('href');
+        if (!href) {
+          return;
+        }
+
+        const targetUrl = decodeURIComponent(href.replace('/url?q=', '').split('&')[0]);
+        if (!targetUrl.startsWith('http')) {
+          return;
+        }
+
+        if (seen.has(targetUrl)) {
+          return;
+        }
+
+        if (
+          targetUrl.includes('google.com') ||
+          targetUrl.includes('cse.google.com')
+        ) {
+          return;
+        }
+
+        const title = $(element).find('h3').first().text().trim();
+        if (!title) {
+          return;
+        }
+
+        const container = $(element).closest('div');
+        const snippet = container.find('span').map((_, span) => $(span).text().trim()).get().join(' ').trim();
+        const sourceHost = (() => {
+          try {
+            return new URL(targetUrl).hostname.replace(/^www\./, '');
+          } catch {
+            return 'job board';
+          }
+        })();
+
+        seen.add(targetUrl);
+        jobs.push({
+          _id: `google_html_${Date.now()}_${index}`,
+          title: this.cleanTitle(title),
+          company: this.extractCompany(sourceHost, title),
+          location: this.extractLocation(snippet) || location || 'Not specified',
+          description: this.cleanDescription(snippet || `${title} on ${sourceHost}`),
+          salary: this.extractSalary(snippet) || 'Not specified',
+          employmentType: this.extractEmploymentType(snippet),
+          experienceLevel: this.guessExperienceLevel(`${title} ${snippet}`),
+          postedDate: this.extractPostDate(snippet) || new Date().toISOString().split('T')[0],
+          originalUrl: targetUrl,
+          source: this.getJobSite(sourceHost),
+          requirements: this.extractRequirements(snippet, keywords),
+          keywords: [keywords.toLowerCase(), ...this.extractKeywords(snippet)],
+          benefits: this.extractBenefits(snippet),
+          isActive: true,
+          scrapedAt: new Date()
+        });
+      });
+
+      if (jobs.length === 0) {
+        return null;
+      }
+
+      return {
+        jobs,
+        totalResultsAvailable: jobs.length,
+        maxResultsReturnable: jobs.length
+      };
+    } catch (error) {
+      console.warn('⚠️ HTML Google fallback failed:', error instanceof Error ? error.message : error);
+      return null;
+    }
+  }
+
+  private mapScrapedJobsToSearchResult(jobs: any[]): JobSearchResult {
+    return {
+      jobs: jobs.map((job, index) => ({
+        _id: job._id || `scraped_${Date.now()}_${index}`,
+        title: job.title,
+        company: job.company,
+        location: job.location || 'Israel',
+        description: job.description || `${job.title} position at ${job.company}`,
+        salary: job.salary || 'Not specified',
+        employmentType: job.employmentType || 'full-time',
+        experienceLevel: job.experienceLevel || 'mid',
+        postedDate: job.postedDate instanceof Date
+          ? job.postedDate.toISOString().split('T')[0]
+          : job.postedDate || new Date().toISOString().split('T')[0],
+        originalUrl: job.originalUrl || '#',
+        source: job.source || 'Job Board',
+        requirements: Array.isArray(job.requirements) ? job.requirements : [],
+        keywords: Array.isArray(job.keywords) ? job.keywords : [],
+        benefits: Array.isArray(job.benefits) ? job.benefits : [],
+        isActive: job.isActive !== false,
+        scrapedAt: job.scrapedAt instanceof Date ? job.scrapedAt : new Date(job.scrapedAt || Date.now())
+      })),
+      totalResultsAvailable: jobs.length,
+      maxResultsReturnable: jobs.length
+    };
+  }
+
+  private async buildFallbackSearchResults(
+    keywords: string,
+    location: string,
+    limit: number,
+    startIndex: number
+  ): Promise<JobSearchResult> {
+    // Fetch a much larger pool than the page size so sparse sources do not cap
+    // the final result count to only a handful of jobs.
+    const requestedPoolSize = Math.max(limit * 4, 60);
+    const scrapedJobs = await this.jobAggregatorService.searchJobs({
+      keywords,
+      location,
+      sources: ['alljobs', 'jobmaster', 'gotfriends', 'drushim', 'techit', 'jobnet'],
+      limit: requestedPoolSize
+    });
+
+    const googleHtmlResults = await this.searchGoogleHtmlFallback(keywords, location, requestedPoolSize, startIndex);
+    const combinedJobs = this.deduplicateJobsByUrl([
+      ...this.mapScrapedJobsToSearchResult(scrapedJobs).jobs,
+      ...(googleHtmlResults?.jobs ?? [])
+    ]);
+
+    if (combinedJobs.length > 0) {
+      const zeroBasedStart = Math.max(startIndex - 1, 0);
+      const pagedJobs = combinedJobs.slice(zeroBasedStart, zeroBasedStart + limit);
+      return {
+        jobs: pagedJobs,
+        totalResultsAvailable: combinedJobs.length,
+        maxResultsReturnable: combinedJobs.length
+      };
+    }
+
+    const siteResponse = await this.jobSitesService.getAllSites();
+    const allSites = siteResponse.data.sites;
+    const queryTokens = this.buildQueryTokens(keywords, location);
+    const queryText = [keywords.trim(), location.trim()].filter(Boolean).join(' ').toLowerCase();
+    const keywordParts = this.buildQueryTokens(keywords);
+
+    const rankedSites = [...allSites]
+      .map((site) => {
+        let score = site.featured ? 4 : 0;
+        const haystack = `${site.name} ${site.description} ${site.category} ${site.location}`.toLowerCase();
+
+        for (const token of queryTokens) {
+          if (haystack.includes(token)) {
+            score += 2;
+          }
+        }
+
+        if (queryTokens.length > 0 && queryTokens.every((token) => haystack.includes(token))) {
+          score += 4;
+        }
+
+        if (queryText.includes('remote') && site.location.toLowerCase().includes('remote')) {
+          score += 3;
+        }
+
+        if (queryText.includes('hybrid') && /global|tech|professional/i.test(`${site.location} ${site.category}`)) {
+          score += 1;
+        }
+
+        return { site, score };
+      })
+      .sort((left, right) => right.score - left.score);
+
+    const totalResultsAvailable = rankedSites.length;
+    const zeroBasedStart = Math.max(startIndex - 1, 0);
+    const selectedSites = rankedSites.slice(zeroBasedStart, zeroBasedStart + limit);
+
+    const jobs = selectedSites.map(({ site }, index) => ({
+      _id: `site_search_${site.id}_${zeroBasedStart + index + 1}`,
+      title: `Search ${keywords} jobs on ${site.name}`,
+      company: site.name,
+      location: location || site.location,
+      description: `Open the real ${site.name} search page for ${keywords}${location ? ` in ${location}` : ''}. This fallback keeps results usable when the Google Custom Search API is unavailable.`,
+      salary: 'See site listing',
+      employmentType: 'full-time',
+      experienceLevel: 'mid',
+      postedDate: new Date().toISOString().split('T')[0],
+      originalUrl: this.buildJobBoardSearchUrl(site.id, keywords, location),
+      source: site.name,
+      requirements: keywordParts,
+      keywords: keywordParts,
+      benefits: [],
+      isActive: true,
+      scrapedAt: new Date()
+    }));
+
+    return {
+      jobs,
+      totalResultsAvailable,
+      maxResultsReturnable: totalResultsAvailable
+    };
+  }
+
+  private deduplicateJobsByUrl(jobs: JobResult[]): JobResult[] {
+    const seen = new Set<string>();
+
+    return jobs.filter((job) => {
+      const url = (job.originalUrl || '').trim().toLowerCase();
+      if (!url || seen.has(url)) {
+        return false;
+      }
+
+      seen.add(url);
+      return true;
+    });
+  }
+
+  private buildJobBoardSearchUrl(siteId: string, keywords: string, location: string): string {
+    const encodedKeywords = encodeURIComponent(keywords.trim());
+    const encodedLocation = encodeURIComponent(location.trim());
+
+    switch (siteId) {
+      case 'linkedin':
+        return `https://www.linkedin.com/jobs/search/?keywords=${encodedKeywords}&location=${encodedLocation}`;
+      case 'indeed':
+        return `https://www.indeed.com/jobs?q=${encodedKeywords}&l=${encodedLocation}`;
+      case 'glassdoor':
+        return `https://www.glassdoor.com/Job/jobs.htm?sc.keyword=${encodedKeywords}`;
+      case 'monster':
+        return `https://www.monster.com/jobs/search/?q=${encodedKeywords}&where=${encodedLocation}`;
+      case 'ziprecruiter':
+        return `https://www.ziprecruiter.com/jobs-search?search=${encodedKeywords}&location=${encodedLocation}`;
+      case 'dice':
+        return `https://www.dice.com/jobs?q=${encodedKeywords}&location=${encodedLocation}`;
+      case 'angel':
+        return `https://wellfound.com/jobs?query=${encodedKeywords}`;
+      case 'remote':
+        return `https://remote.co/remote-jobs/search/?search_keywords=${encodedKeywords}`;
+      case 'weworkremotely':
+        return `https://weworkremotely.com/remote-jobs/search?term=${encodedKeywords}`;
+      case 'upwork':
+        return `https://www.upwork.com/nx/jobs/search/?q=${encodedKeywords}`;
+      case 'freelancer':
+        return `https://www.freelancer.com/jobs/${encodedKeywords}`;
+      case 'alljobs':
+        return `https://www.alljobs.co.il/SearchResultsGuest.aspx?page=1&position=&type=&freetxt=${encodeURIComponent([keywords, location].filter(Boolean).join(' '))}&city=&region=`;
+      case 'drushim':
+        return `https://www.drushim.co.il/jobs/search/?q=${encodeURIComponent([keywords, location].filter(Boolean).join(' '))}`;
+      case 'jobmaster':
+        return `https://www.jobmaster.co.il/jobs/?q=${encodeURIComponent([keywords, location].filter(Boolean).join(' '))}`;
+      case 'gotfriends':
+        return `https://www.gotfriends.co.il/jobs?search=${encodeURIComponent([keywords, location].filter(Boolean).join(' '))}`;
+      case 'techit':
+        return `https://www.techit.co.il/jobs?q=${encodeURIComponent([keywords, location].filter(Boolean).join(' '))}`;
+      case 'jobnet':
+        return `https://www.jobnet.co.il/jobs?q=${encodeURIComponent([keywords, location].filter(Boolean).join(' '))}`;
+      case 'stackoverflow':
+        return 'https://stackoverflow.com/jobs';
+      case 'github':
+        return 'https://github.com/about/careers';
+      default:
+        return `https://www.google.com/search?q=${encodeURIComponent(`${keywords} ${location} jobs`)}`;
+    }
+  }
+
+  private formatGoogleApiError(error: any): string {
+    const status = error?.response?.status;
+    const apiMessage = error?.response?.data?.error?.message;
+
+    if (status === 403) {
+      return 'Google Custom Search API rejected the request with 403 Forbidden. Check that the API key is valid for Custom Search JSON API and that the programmable search engine is configured correctly.';
+    }
+
+    if (status === 429) {
+      return 'Google Custom Search API quota exceeded. Please check your API usage limits.';
+    }
+
+    if (apiMessage) {
+      return `Google Custom Search API error: ${apiMessage}`;
+    }
+
+    return error?.message || 'Unknown Google API error';
+  }
+
   async searchJobs(keywords: string, location: string = PAGINATION_CONSTANTS.DEFAULT_LOCATION, limit: number = PAGINATION_CONSTANTS.MAX_RESULTS_LIMIT, startIndex: number = 1): Promise<JobSearchResult> {
     console.log(`🔍 Google search for jobs: "${keywords}" in ${location || 'Any location'}`);
     
@@ -63,7 +398,8 @@ export class GoogleJobSearchService {
       
       // Require API keys - no mock results
       if (!this.apiKey || !this.searchEngineId) {
-        throw new Error('Google API keys not configured. Please set GOOGLE_API_KEY and GOOGLE_SEARCH_ENGINE_ID in your .env file');
+        console.warn('⚠️ Google API keys are not configured. Falling back to direct job-board search links.');
+        return this.buildFallbackSearchResults(keywords, location, limit, startIndex);
       }
 
       console.log(`🌍 Searching Google with query: "${searchQuery}"`);
@@ -73,6 +409,7 @@ export class GoogleJobSearchService {
       const totalRequests = Math.ceil(Math.min(limit, PAGINATION_CONSTANTS.MAX_API_RESULTS) / maxPerRequest); // Cap at API results total
       const allResults: GoogleSearchResult[] = [];
       let totalResultsAvailable = 0;
+      let firstRequestFailure: string | null = null;
 
       for (let requestIndex = 0; requestIndex < totalRequests; requestIndex++) {
         const currentStartIndex = startIndex + (requestIndex * maxPerRequest);
@@ -103,10 +440,21 @@ export class GoogleJobSearchService {
             console.log(`✅ Request ${requestIndex + 1}: Found ${response.data.items.length} results (total: ${allResults.length})`);
           }
         } catch (requestError: any) {
-          console.error(`❌ Google search request ${requestIndex + 1} error:`, requestError.message);
-          // Continue with other requests even if one fails
+          const formattedError = this.formatGoogleApiError(requestError);
+          console.error(`❌ Google search request ${requestIndex + 1} error:`, formattedError);
+
+          if (requestIndex === 0 && allResults.length === 0) {
+            firstRequestFailure = formattedError;
+            break;
+          }
+
+          // Continue with other requests only if we already have some results
           break;
         }
+      }
+
+      if (firstRequestFailure) {
+        throw new Error(firstRequestFailure);
       }
 
       if (allResults.length > 0) {
@@ -127,9 +475,16 @@ export class GoogleJobSearchService {
 
     } catch (error: any) {
       console.error('❌ Google search error:', error);
-      if (error.message?.includes('quotaExceeded')) {
-        throw new Error('Google API quota exceeded. Please check your API usage limits.');
+      if (error?.response?.status === 429 || error.message?.includes('quotaExceeded')) {
+        console.warn('⚠️ Google API quota exceeded. Falling back to direct job-board search links.');
+        return this.buildFallbackSearchResults(keywords, location, limit, startIndex);
       }
+
+      if (error?.response?.status === 403 || error.message?.includes('403 Forbidden')) {
+        console.warn('⚠️ Google API rejected the request. Falling back to direct job-board search links.');
+        return this.buildFallbackSearchResults(keywords, location, limit, startIndex);
+      }
+
       throw new Error(`Google search failed: ${error.message || 'Unknown error'}`);
     }
   }

@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import type { Job, JobSearchQuery, JobSearchResponse } from '../types';
+import type { Job, JobSearchQuery, JobSearchResponse, PersonalizedSearchInput } from '../types';
 import { jobsApi } from '../services/api';
 import { PAGINATION } from '../constants/pagination';
 
@@ -18,6 +18,8 @@ export interface JobsState {
     employmentTypes: string[];
   };
   searchQuery: JobSearchQuery;
+  searchMode: 'standard' | 'personalized';
+  lastPersonalizedInput: (PersonalizedSearchInput & { page?: number; limit?: number }) | null;
   isLoading: boolean;
   error: string | null;
   selectedJob: Job | null;
@@ -41,6 +43,8 @@ const initialState: JobsState = {
     page: PAGINATION.DEFAULT_PAGE,
     limit: PAGINATION.DEFAULT_RESULTS_PER_PAGE
   },
+  searchMode: 'standard',
+  lastPersonalizedInput: null,
   isLoading: false,
   error: null,
   selectedJob: null
@@ -64,6 +68,22 @@ export const searchJobs = createAsyncThunk(
     } catch (error: any) {
       console.error('Search jobs error:', error);
       return rejectWithValue(error.message || error.error || 'Failed to search jobs');
+    }
+  }
+);
+
+export const personalizedSearchJobs = createAsyncThunk(
+  'jobs/personalizedSearchJobs',
+  async (input: PersonalizedSearchInput & { page?: number; limit?: number }, { rejectWithValue }) => {
+    try {
+      const response = await jobsApi.searchPersonalizedJobs(input);
+      if (response && response.success) {
+        return response;
+      }
+
+      throw new Error((response as any)?.message || 'Personalized search failed');
+    } catch (error: any) {
+      return rejectWithValue(error.message || error.error || 'Failed to run personalized search');
     }
   }
 );
@@ -130,6 +150,7 @@ const jobsSlice = createSlice({
       .addCase(searchJobs.pending, (state) => {
         state.isLoading = true;
         state.error = null;
+        state.searchMode = 'standard';
       })
       .addCase(searchJobs.fulfilled, (state, action) => {
         state.isLoading = false;
@@ -152,6 +173,26 @@ const jobsSlice = createSlice({
         };
       })
       .addCase(searchJobs.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      })
+      .addCase(personalizedSearchJobs.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+        state.searchMode = 'personalized';
+      })
+      .addCase(personalizedSearchJobs.fulfilled, (state, action) => {
+        state.isLoading = false;
+        const response = action.payload as JobSearchResponse;
+        state.jobs = response.jobs || [];
+        state.totalCount = response.totalCount || 0;
+        state.totalResultsAvailable = response.totalResultsAvailable;
+        state.maxResultsReturnable = response.maxResultsReturnable;
+        state.currentPage = response.currentPage || 1;
+        state.totalPages = response.totalPages || 1;
+        state.lastPersonalizedInput = action.meta.arg;
+      })
+      .addCase(personalizedSearchJobs.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       })

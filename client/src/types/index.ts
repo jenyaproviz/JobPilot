@@ -23,6 +23,12 @@ export interface Job {
   jobScore?: number; // Google search format
   isRemote?: boolean; // Google search feature
   isLikelyJob?: boolean; // Google search confidence score
+  aiAnalysis?: {
+    matchingSkills: string[];
+    missingSkills: string[];
+    recommendations: string[];
+    overallAssessment: string;
+  };
 }
 
 export interface JobSearchQuery {
@@ -50,6 +56,7 @@ export interface JobSearchResponse {
   currentPage: number;
   totalPages: number;
   resultsPerPage: number;
+  searchType?: 'google' | 'personalized';
   query?: {
     keywords: string;
     location: string;
@@ -61,6 +68,19 @@ export interface JobSearchResponse {
     jobs: Job[];
   };
   timestamp: string;
+}
+
+export interface PersonalizedSearchInput {
+  keywords?: string;
+  location?: string;
+  yearsExperience?: number;
+  technicalSkills?: string[];
+  languages?: string[];
+  radiusKm?: number;
+  preferredKeywords?: string[];
+  resume?: File | null;
+  page?: number;
+  limit?: number;
 }
 
 // Legacy interface for backward compatibility

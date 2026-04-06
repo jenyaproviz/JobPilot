@@ -14,12 +14,12 @@ export interface IntelligentSearchOptions {
 }
 
 export class IntelligentJobService extends JobService {
-  private mcpServer: JobPilotMCPServer;
+  private mcpServer: JobPilotMCPServer | null;
   private aiAnalyzer: AIJobAnalyzer;
 
   constructor() {
     super();
-    this.mcpServer = new JobPilotMCPServer();
+    this.mcpServer = null;
     this.aiAnalyzer = new AIJobAnalyzer();
     
     console.log('🤖 Intelligent Job Service initialized');
@@ -27,6 +27,9 @@ export class IntelligentJobService extends JobService {
 
   async startMCPServer(): Promise<void> {
     try {
+      if (!this.mcpServer) {
+        this.mcpServer = new JobPilotMCPServer();
+      }
       await this.mcpServer.start();
       console.log('✅ MCP Server started successfully');
     } catch (error) {
@@ -36,8 +39,11 @@ export class IntelligentJobService extends JobService {
 
   async stopMCPServer(): Promise<void> {
     try {
-      await this.mcpServer.stop();
-      console.log('🔴 MCP Server stopped');
+      if (this.mcpServer) {
+        await this.mcpServer.stop();
+        console.log('🔴 MCP Server stopped');
+        this.mcpServer = null;
+      }
     } catch (error) {
       console.error('❌ Error stopping MCP Server:', error);
     }

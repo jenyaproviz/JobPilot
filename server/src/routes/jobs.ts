@@ -8,8 +8,6 @@ const intelligentJobService = new IntelligentJobService();
 
 // Initialize scraping configurations on startup
 intelligentJobService.initializeScrapingConfigs();
-// Start MCP server for AI capabilities
-intelligentJobService.startMCPServer();
 
 // GET /api/jobs - Search and filter jobs
 router.get("/", async (req: Request, res: Response) => {
@@ -56,7 +54,7 @@ router.get("/", async (req: Request, res: Response) => {
 // GET /api/jobs/:id - Get specific job details
 router.get("/:id", async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id || '');
     
     if (!id) {
       return res.status(400).json({
@@ -156,7 +154,7 @@ router.get("/stats/overview", async (req: Request, res: Response) => {
 // POST /api/jobs/:id/save - Save a job to user's saved jobs (requires auth)
 router.post("/:id/save", async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id || '');
     // TODO: Get user ID from JWT token when auth is implemented
     const userId = req.body.userId || 'temp-user'; // Temporary
 
@@ -284,7 +282,7 @@ router.get("/recommendations", async (req: Request, res: Response) => {
 // GET /api/jobs/:id/analyze - Get AI analysis of a specific job
 router.get("/:id/analyze", async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id || '');
     const skills = req.query.skills ? (req.query.skills as string).split(',') : undefined;
     
     if (!id) {

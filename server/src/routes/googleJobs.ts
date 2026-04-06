@@ -6,6 +6,173 @@ import { PAGINATION_CONSTANTS } from '../constants/pagination';
 const router = express.Router();
 const googleJobSearch = new GoogleJobSearchService();
 
+const normalizeExperienceLevel = (value?: string): string => {
+  const normalized = (value || '').toLowerCase();
+  if (normalized.includes('entry') || normalized.includes('junior')) return 'entry';
+  if (normalized.includes('senior') || normalized.includes('lead') || normalized.includes('principal')) return 'senior';
+  if (normalized.includes('executive')) return 'executive';
+  return normalized || 'mid';
+};
+
+const normalizeEmploymentType = (value?: string): string => {
+  const normalized = (value || '').toLowerCase();
+  if (normalized.includes('part')) return 'part-time';
+  if (normalized.includes('contract')) return 'contract';
+  if (normalized.includes('freelance')) return 'freelance';
+  if (normalized.includes('intern')) return 'internship';
+  return 'full-time';
+};
+
+const normalizeJobs = (jobs: any[]): any[] => {
+  return jobs.map((job, index) => ({
+    ...job,
+    _id: job._id || job.id || `google_${Date.now()}_${index}`,
+    originalUrl: job.originalUrl || job.url || job.link || '#',
+    url: job.url || job.originalUrl || job.link || '#',
+    salary: job.salary || job.salaryRange || 'Not specified',
+    postedDate: job.postedDate || job.datePosted || new Date().toISOString().split('T')[0],
+    datePosted: job.datePosted || job.postedDate || new Date().toISOString().split('T')[0],
+    requirements: Array.isArray(job.requirements) ? job.requirements : [],
+    keywords: Array.isArray(job.keywords) ? job.keywords : [],
+    benefits: Array.isArray(job.benefits) ? job.benefits : [],
+    employmentType: normalizeEmploymentType(job.employmentType),
+    experienceLevel: normalizeExperienceLevel(job.experienceLevel),
+  }));
+};
+
+const normalizeSearchResult = (searchResult: any, fallbackLimit: number) => {
+  const jobs = normalizeJobs(Array.isArray(searchResult?.jobs) ? searchResult.jobs : []);
+  const totalResultsAvailable = typeof searchResult?.totalResultsAvailable === 'number'
+    ? searchResult.totalResultsAvailable
+    : typeof searchResult?.totalCount === 'number'
+      ? searchResult.totalCount
+      : jobs.length;
+  const maxResultsReturnable = typeof searchResult?.maxResultsReturnable === 'number'
+    ? searchResult.maxResultsReturnable
+    : Math.max(totalResultsAvailable, fallbackLimit, jobs.length);
+
+  return {
+    jobs,
+    totalResultsAvailable,
+    maxResultsReturnable,
+  };
+};
+
+const performGoogleSearch = async (
+  keywords: string,
+  location: string,
+  limit: number,
+  startIndex: number = 1
+) => {
+  const searchResult = await (googleJobSearch as any).searchJobs(keywords, location, limit, startIndex);
+  return normalizeSearchResult(searchResult, limit);
+};
+
+const tokenizeKeywords = (value: string): string[] => {
+  return [...new Set(
+    value
+      .split(/[\n,;\/\s]+/)
+      .map((item) => item.trim())
+      .filter((item) => item.length > 1)
+  )];
+};
+
+const matchesTerm = (haystack: string, term: string): boolean => {
+  const normalizedHaystack = haystack.toLowerCase();
+  const normalizedTerm = term.trim().toLowerCase();
+  if (!normalizedTerm) {
+    return false;
+  }
+
+  if (normalizedTerm.includes(' ')) {
+    return normalizedHaystack.includes(normalizedTerm);
+  }
+
+  const escaped = normalizedTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`\\b${escaped}\\b`, 'i').test(normalizedHaystack);
+};
+
+const toLabel = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+
+const normalizeVisibleMatchScore = (rawScore: number): number => {
+  if (rawScore <= 0) {
+    return 0;
+  }
+
+  return Math.round(40 + (Math.min(rawScore, 100) * 0.6));
+};
+
+const addMatchScoring = (
+  jobs: any[],
+  options: {
+    keywords: string;
+    location?: string;
+    employmentType?: string;
+    experienceLevel?: string;
+  }
+) => {
+  const requestedTerms = tokenizeKeywords(options.keywords);
+
+  return jobs.map((job) => {
+    const titleHaystack = [job.title, ...(job.requirements || [])].join(' ').toLowerCase();
+    const fullHaystack = [
+      job.title,
+      job.company,
+      job.location,
+      job.description,
+      ...(job.requirements || []),
+      ...(job.keywords || [])
+    ].join(' ').toLowerCase();
+
+    const matchedTerms = requestedTerms.filter((term) => matchesTerm(fullHaystack, term));
+    const matchedInTitle = requestedTerms.filter((term) => matchesTerm(titleHaystack, term));
+    const missingTerms = requestedTerms.filter((term) => !matchedTerms.includes(term)).slice(0, 5);
+
+    let score = 0;
+
+    if (requestedTerms.length > 0) {
+      score += Math.round((matchedTerms.length / requestedTerms.length) * 70);
+      score += Math.min(matchedInTitle.length * 10, 20);
+    }
+
+    if (options.location && String(job.location || '').toLowerCase().includes(options.location.toLowerCase())) {
+      score += 10;
+    }
+
+    if (options.employmentType && options.employmentType !== 'any') {
+      if (String(job.employmentType || '').toLowerCase() === options.employmentType.toLowerCase()) {
+        score += 5;
+      }
+    }
+
+    if (options.experienceLevel && options.experienceLevel !== 'any') {
+      if (String(job.experienceLevel || '').toLowerCase() === options.experienceLevel.toLowerCase()) {
+        score += 5;
+      }
+    }
+
+    const rawScore = Math.max(0, Math.min(100, score));
+    const matchScore = normalizeVisibleMatchScore(rawScore);
+
+    return {
+      ...job,
+      matchScore,
+      aiAnalysis: {
+        matchingSkills: matchedTerms.map(toLabel),
+        missingSkills: missingTerms.map(toLabel),
+        recommendations: missingTerms.length > 0
+          ? [`Try refining with ${missingTerms.slice(0, 2).join(', ')} to improve targeting.`]
+          : ['Strong alignment with your current search terms.'],
+        overallAssessment: matchScore >= 75
+          ? 'High match'
+          : matchScore >= 50
+            ? 'Moderate match'
+            : 'Low match'
+      }
+    };
+  });
+};
+
 // GET /api/jobs/google-search - New Google-based job search
 router.get('/google-search', async (req: Request, res: Response) => {
   try {
@@ -17,16 +184,21 @@ router.get('/google-search', async (req: Request, res: Response) => {
 
     console.log(`🔍 Google job search: "${keywords}" in ${location || 'any location'}`);
 
-    const searchResult = await googleJobSearch.searchJobs(
+    const searchResult = await performGoogleSearch(
       keywords as string, 
       location as string, 
       parseInt(limit as string)
     );
 
+    const scoredJobs = addMatchScoring(searchResult.jobs, {
+      keywords: keywords as string,
+      location: location as string
+    });
+
     res.json({
       success: true,
-      jobs: searchResult.jobs,
-      totalCount: searchResult.jobs.length,
+      jobs: scoredJobs,
+      totalCount: scoredJobs.length,
       totalResultsAvailable: searchResult.totalResultsAvailable,
       maxResultsReturnable: searchResult.maxResultsReturnable,
       page: 1,
@@ -70,7 +242,7 @@ router.get('/search', async (req: Request, res: Response) => {
     // Google Custom Search API limits us to 10 results per request, so we need to make multiple requests
     // For now, we'll get more results by making multiple calls with different start indices
     const maxResults = Math.min(resultsLimit, PAGINATION_CONSTANTS.MAX_API_RESULTS); // Cap at API results total
-    const searchResult = await googleJobSearch.searchJobs(
+    const searchResult = await performGoogleSearch(
       searchKeywords, 
       location as string, 
       maxResults
@@ -106,7 +278,7 @@ router.get('/search', async (req: Request, res: Response) => {
       
       try {
         // Make API call for specific page (Google API uses 1-based indexing)
-        const pageResult = await googleJobSearch.searchJobs(
+        const pageResult = await performGoogleSearch(
           searchKeywords,
           location as string,
           resultsLimit,
@@ -137,9 +309,16 @@ router.get('/search', async (req: Request, res: Response) => {
       }
     }
 
+    const scoredJobs = addMatchScoring(paginatedJobs, {
+      keywords: searchKeywords,
+      location: location as string,
+      employmentType: employmentType as string | undefined,
+      experienceLevel: experienceLevel as string | undefined
+    });
+
     res.json({
       success: true,
-      jobs: paginatedJobs,
+      jobs: scoredJobs,
       totalCount: availableResults, // Jobs we actually have
       totalResultsAvailable: searchResult.totalResultsAvailable, // Total from Google
       maxResultsReturnable: searchResult.maxResultsReturnable, // API limitation
@@ -188,16 +367,21 @@ router.get('/', async (req: Request, res: Response) => {
     
     console.log(`🔍 Simple job search: "${searchKeywords}"`);
 
-    const searchResult = await googleJobSearch.searchJobs(
+    const searchResult = await performGoogleSearch(
       searchKeywords, 
       location as string, 
       parseInt(limit as string)
     );
 
+    const scoredJobs = addMatchScoring(searchResult.jobs, {
+      keywords: searchKeywords,
+      location: location as string
+    });
+
     res.json({
       success: true,
-      jobs: searchResult.jobs,
-      totalCount: searchResult.jobs.length,
+      jobs: scoredJobs,
+      totalCount: scoredJobs.length,
       totalResultsAvailable: searchResult.totalResultsAvailable,
       maxResultsReturnable: searchResult.maxResultsReturnable,
       page: 1,

@@ -117,3 +117,21 @@ export interface IIntelligentJobSearchResponse extends IJobSearchResponse {
     resultImprovement: number;
   };
 }
+
+export interface IUserJobProfile {
+  keywords?: string;
+  preferredKeywords?: string[];
+  technicalSkills: string[];
+  languages: string[];
+  location?: string;
+  radiusKm?: number;
+  yearsExperience?: number;
+}
+
+export interface IResumeInsights {
+  text: string;
+  detectedSkills: string[];
+  detectedLanguages: string[];
+  detectedYearsExperience?: number;
+  fileName?: string;
+}

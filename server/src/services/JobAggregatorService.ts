@@ -20,7 +20,12 @@ export class JobAggregatorService {
   async searchJobs(request: SearchJobsRequest): Promise<IJob[]> {
     const { keywords, location = 'Israel', sources = ['alljobs', 'drushim', 'jobmaster'], limit = PAGINATION_CONSTANTS.DEFAULT_RESULTS_PER_PAGE } = request;
     const allJobs: IJob[] = [];
-    const perSourceLimit = Math.ceil(limit / sources.length);
+    // Do not spread a small limit too thinly across many sources. If only 1-2 sites
+    // return jobs, we still want a healthy result set from those sites.
+    const perSourceLimit = Math.max(
+      Math.ceil(limit / Math.max(sources.length, 1)),
+      Math.min(limit, 15)
+    );
 
     console.log(`🔍 Starting job search for "${keywords}" in ${location}`);
 

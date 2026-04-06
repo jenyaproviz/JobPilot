@@ -9,6 +9,7 @@ import JobSitesView from './components/JobSitesView';
 import ContactForm from './components/ContactForm';
 import JobSearchForm from './components/JobSearchForm';
 import JobSearchResults from './components/JobSearchResults';
+import SavedJobsSection from './components/SavedJobsSection';
 
 const AppContent: React.FC = () => {
   const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking');
@@ -50,7 +51,7 @@ const AppContent: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full px-8 sm:px-10 lg:px-12">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-600 rounded-lg">
@@ -96,7 +97,7 @@ const AppContent: React.FC = () => {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="w-full px-8 sm:px-10 lg:px-12 py-8">
         {/* Server Offline Banner */}
         {serverStatus === 'offline' && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
@@ -121,6 +122,9 @@ const AppContent: React.FC = () => {
         
         {/* Job Search Results */}
         <JobSearchResults />
+
+        {/* Saved Jobs */}
+        <SavedJobsSection />
         
         {/* Job Sites Directory */}
         <JobSitesView />
@@ -128,7 +132,7 @@ const AppContent: React.FC = () => {
 
       {/* Footer */}
       <footer className="bg-white border-t border-gray-200 mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="w-full px-8 sm:px-10 lg:px-12 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-600 rounded-lg">

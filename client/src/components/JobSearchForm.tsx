@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Filter, Briefcase, TrendingUp } from 'lucide-react';
+import { Search, MapPin, Filter, Briefcase, TrendingUp, Brain, Upload } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../hooks/redux';
-import { searchJobs, setSearchQuery } from '../store/jobsSlice';
+import { personalizedSearchJobs, searchJobs, setSearchQuery } from '../store/jobsSlice';
 import { jobsApi } from '../services/api';
 import { PAGINATION } from '../constants/pagination';
 
@@ -9,6 +9,14 @@ const JobSearchForm: React.FC = () => {
   const dispatch = useAppDispatch();
   const { searchQuery, isLoading } = useAppSelector((state) => state.jobs);
   const [trendingKeywords, setTrendingKeywords] = useState<string[]>([]);
+  const [usePersonalizedSearch, setUsePersonalizedSearch] = useState(false);
+  const [profile, setProfile] = useState({
+    yearsExperience: '',
+    technicalSkills: '',
+    languages: '',
+    radiusKm: '40',
+    resume: null as File | null
+  });
   
   const [localQuery, setLocalQuery] = useState({
     keywords: searchQuery.keywords || '',
@@ -44,9 +52,10 @@ const JobSearchForm: React.FC = () => {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!localQuery.keywords.trim()) {
-      alert('Please enter job keywords');
+
+    const hasKeywordInput = localQuery.keywords.trim() || profile.technicalSkills.trim() || profile.resume;
+    if (!hasKeywordInput) {
+      alert('Please enter keywords, skills, or upload a resume');
       return;
     }
 
@@ -57,6 +66,32 @@ const JobSearchForm: React.FC = () => {
     };
 
     dispatch(setSearchQuery(query));
+
+    if (usePersonalizedSearch) {
+      dispatch(personalizedSearchJobs({
+        keywords: localQuery.keywords,
+        location: localQuery.location,
+        preferredKeywords: localQuery.keywords
+          .split(/[\n,;]+/)
+          .map((item) => item.trim())
+          .filter(Boolean),
+        technicalSkills: profile.technicalSkills
+          .split(/[\n,;]+/)
+          .map((item) => item.trim())
+          .filter(Boolean),
+        languages: profile.languages
+          .split(/[\n,;]+/)
+          .map((item) => item.trim())
+          .filter(Boolean),
+        yearsExperience: profile.yearsExperience ? parseInt(profile.yearsExperience, 10) : undefined,
+        radiusKm: profile.radiusKm ? parseInt(profile.radiusKm, 10) : undefined,
+        resume: profile.resume,
+        page: PAGINATION.DEFAULT_PAGE,
+        limit: 50
+      }));
+      return;
+    }
+
     dispatch(searchJobs(query));
   };
 
@@ -64,6 +99,10 @@ const JobSearchForm: React.FC = () => {
 
   const handleInputChange = (field: string, value: string) => {
     setLocalQuery(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleProfileChange = (field: string, value: string | File | null) => {
+    setProfile((prev) => ({ ...prev, [field]: value }));
   };
 
   return (
@@ -74,6 +113,25 @@ const JobSearchForm: React.FC = () => {
       </div>
       
       <form onSubmit={handleSearch} className="space-y-4">
+        <div className="flex items-center justify-between rounded-lg border border-blue-100 bg-blue-50 px-4 py-3">
+          <div>
+            <div className="flex items-center gap-2 text-blue-900 font-medium">
+              <Brain className="w-4 h-4" />
+              Personalized AI-style matching
+            </div>
+            <p className="text-sm text-blue-700">Use your criteria and resume to rank job results by fit.</p>
+          </div>
+          <label className="inline-flex items-center gap-2 text-sm font-medium text-blue-900">
+            <input
+              type="checkbox"
+              checked={usePersonalizedSearch}
+              onChange={(e) => setUsePersonalizedSearch(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            Enable
+          </label>
+        </div>
+
         {/* Main Search Row */}
         <div className="flex gap-4 items-end">
           <div className="flex-1">
@@ -114,9 +172,77 @@ const JobSearchForm: React.FC = () => {
             disabled={isLoading}
             className="px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {isLoading ? 'Searching...' : 'Search Jobs'}
+            {isLoading ? 'Searching...' : usePersonalizedSearch ? 'Search with Profile' : 'Search Jobs'}
           </button>
         </div>
+
+        {usePersonalizedSearch && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 rounded-xl border border-gray-200 bg-gray-50 p-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Years of experience</label>
+              <input
+                type="number"
+                min="0"
+                max="40"
+                value={profile.yearsExperience}
+                onChange={(e) => handleProfileChange('yearsExperience', e.target.value)}
+                placeholder="2"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Search radius in km</label>
+              <input
+                type="number"
+                min="0"
+                max="200"
+                value={profile.radiusKm}
+                onChange={(e) => handleProfileChange('radiusKm', e.target.value)}
+                placeholder="40"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Technical skills</label>
+              <textarea
+                value={profile.technicalSkills}
+                onChange={(e) => handleProfileChange('technicalSkills', e.target.value)}
+                placeholder="React, TypeScript, Python"
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Languages</label>
+              <textarea
+                value={profile.languages}
+                onChange={(e) => handleProfileChange('languages', e.target.value)}
+                placeholder="Russian, English, Hebrew"
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div className="lg:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Upload resume</label>
+              <label className="flex items-center gap-3 rounded-lg border border-dashed border-gray-300 bg-white px-4 py-3 cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
+                <Upload className="w-5 h-5 text-blue-600" />
+                <span className="text-sm text-gray-700">
+                  {profile.resume ? profile.resume.name : 'Upload TXT, PDF, or DOCX resume'}
+                </span>
+                <input
+                  type="file"
+                  accept=".txt,.md,.pdf,.docx"
+                  className="hidden"
+                  onChange={(e) => handleProfileChange('resume', e.target.files?.[0] || null)}
+                />
+              </label>
+            </div>
+          </div>
+        )}
 
         {/* Filters Row */}
         <div className="flex gap-4 pt-4 border-t border-gray-200">
